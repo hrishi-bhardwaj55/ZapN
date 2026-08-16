@@ -1,0 +1,15 @@
+{
+  "configVersion": "zapn-simulator-v1.0",
+  "fixtures": [
+    {
+      "seed": "2026-08-16-qa-a",
+      "difficulty": "easy",
+      "games": ["balloon", "skyscraper", "shapeshift", "code-compare", "pincode", "number-box", "figure-it-out", "switch", "stock-master"]
+    },
+    {
+      "seed": "2026-08-16-qa-b",
+      "difficulty": "hard",
+      "games": ["stock-master", "switch", "figure-it-out", "number-box", "pincode", "code-compare", "shapeshift", "skyscraper", "balloon"]
+    }
+  ]
+}
