@@ -1,4 +1,6 @@
 import { randomInt, seededRandom } from "@/lib/engine";
+import { levelValue } from "@/lib/levels";
+import type { GameLevel } from "@/lib/types";
 
 export interface GaugeState {
   id: number;
@@ -6,6 +8,28 @@ export interface GaugeState {
   angularVelocity: number;
   targetStartAngle: number;
   targetEndAngle: number;
+}
+
+export interface GaugeGenerationProfile {
+  targetWidth: number;
+  minVelocity: number;
+  maxVelocity: number;
+  reverseChance: number;
+  arrivalSpacingSeconds: number;
+  arrivalJitterSeconds: number;
+}
+
+export function stockLevelSettings(level: GameLevel) {
+  return {
+    gaugeCount: levelValue(level, [2, 4, 4, 6, 9]),
+    total: levelValue(level, [8, 9, 11, 13, 15]),
+    targetWidth: levelValue(level, [58, 50, 42, 32, 24]),
+    minVelocity: levelValue(level, [24, 30, 35, 45, 55]),
+    maxVelocity: levelValue(level, [36, 46, 52, 68, 84]),
+    reverseChance: levelValue(level, [0, 0.06, 0.12, 0.28, 0.48]),
+    arrivalSpacingSeconds: levelValue(level, [1.6, 0.85, 0.48, 0.2, 0.06]),
+    arrivalJitterSeconds: levelValue(level, [0.12, 0.14, 0.16, 0.12, 0.06]),
+  };
 }
 
 export function normalizeAngle(angle: number) {
@@ -57,17 +81,41 @@ export function escalatedVelocity(angularVelocity: number, step: number) {
   return direction * Math.min(96, Math.abs(angularVelocity) + increase);
 }
 
-export function generateGauges(seed: string, count: number, hard = false): GaugeState[] {
+export function generateGauges(seed: string, count: number, profileOrHard: Partial<GaugeGenerationProfile> | boolean = false): GaugeState[] {
   const random = seededRandom(`${seed}:stock-master`);
+  const profile: GaugeGenerationProfile = typeof profileOrHard === "boolean"
+    ? {
+        targetWidth: profileOrHard ? 28 : 42,
+        minVelocity: 35,
+        maxVelocity: profileOrHard ? 65 : 52,
+        reverseChance: profileOrHard ? 0.28 : 0,
+        arrivalSpacingSeconds: profileOrHard ? 0.2 : 0.48,
+        arrivalJitterSeconds: 0.14,
+      }
+    : {
+        targetWidth: profileOrHard.targetWidth ?? 42,
+        minVelocity: profileOrHard.minVelocity ?? 35,
+        maxVelocity: profileOrHard.maxVelocity ?? 52,
+        reverseChance: profileOrHard.reverseChance ?? 0,
+        arrivalSpacingSeconds: profileOrHard.arrivalSpacingSeconds ?? 0.48,
+        arrivalJitterSeconds: profileOrHard.arrivalJitterSeconds ?? 0.14,
+      };
+  const sharedArrivalSeconds = 1.15 + random() * 0.25;
   return Array.from({ length: count }, (_, index) => {
     const start = randomInt(random, 0, 359);
-    const width = hard ? 28 : 42;
+    const speed = randomInt(random, profile.minVelocity, profile.maxVelocity);
+    const reverse = profile.reverseChance > 0 && (index === count - 1 || random() < profile.reverseChance);
+    const direction = reverse ? -1 : 1;
+    const center = normalizeAngle(start + profile.targetWidth / 2);
+    const arrivalSeconds = sharedArrivalSeconds
+      + index * profile.arrivalSpacingSeconds
+      + (random() - 0.5) * profile.arrivalJitterSeconds;
     return {
       id: index,
-      angle: randomInt(random, 0, 359),
-      angularVelocity: randomInt(random, 35, hard ? 65 : 52) * (hard && random() > 0.72 ? -1 : 1),
+      angle: normalizeAngle(center - direction * Math.min(170, speed * arrivalSeconds)),
+      angularVelocity: speed * direction,
       targetStartAngle: start,
-      targetEndAngle: normalizeAngle(start + width),
+      targetEndAngle: normalizeAngle(start + profile.targetWidth),
     };
   });
 }

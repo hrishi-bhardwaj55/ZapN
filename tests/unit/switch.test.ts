@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { arrowsMatch, calculateSwitchCost, generateSwitchTrials, parityAnswer, taskForPosition } from "../../games/switch/engine";
+import { arrowsMatch, calculateSwitchCost, generateSwitchTrials, parityAnswer, switchLevelSettings, taskForPosition } from "../../games/switch/engine";
 
 describe("The Switch engine", () => {
   it("derives the active task only from screen position", () => {
@@ -33,5 +33,18 @@ describe("The Switch engine", () => {
     expect(result.repeatRt).toBe(400);
     expect(result.switchRt).toBe(800);
     expect(result.switchCost).toBe(400);
+  });
+
+  it("makes level five longer, faster, and more switch-heavy than level one", () => {
+    const levelOne = switchLevelSettings(1);
+    const levelFive = switchLevelSettings(5);
+    const easyTrials = generateSwitchTrials("level-seed", levelOne.total, levelOne.sequenceLength, levelOne.switchRate);
+    const hardTrials = generateSwitchTrials("level-seed", levelFive.total, levelFive.sequenceLength, levelFive.switchRate);
+    const easyRate = easyTrials.filter((trial) => trial.switched).length / (easyTrials.length - 1);
+    const hardRate = hardTrials.filter((trial) => trial.switched).length / (hardTrials.length - 1);
+    expect(levelFive.total).toBeGreaterThan(levelOne.total);
+    expect(levelFive.sequenceLength).toBeGreaterThan(levelOne.sequenceLength);
+    expect(levelFive.responseWindowMs).toBeLessThan(levelOne.responseWindowMs);
+    expect(hardRate).toBeGreaterThan(easyRate);
   });
 });

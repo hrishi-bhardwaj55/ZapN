@@ -1,17 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { buildResult, difficultyValue, mean, standardDeviation } from "@/lib/engine";
+import { buildResult, mean, standardDeviation } from "@/lib/engine";
 import type { GameProps, RoundRecord } from "@/lib/types";
 import { Feedback, GameShell, useGameTelemetry } from "../shared";
-import { balloonScale, balloonScore, cashOutValue, generateBalloons, pumpBalloon } from "./engine";
+import { balloonCountForLevel, balloonScale, balloonScore, cashOutValue, generateBalloons, pumpBalloon } from "./engine";
 
 export function BalloonGame(props: GameProps) {
-  const total = props.mode === "tutorial" ? 2 : props.config?.trials ?? difficultyValue(props.difficulty, { easy: 8, medium: 12, hard: 20 });
+  const total = props.mode === "tutorial" ? 2 : props.config?.trials || balloonCountForLevel(props.level);
   const deadlineEnabled = props.timed && props.mode === "simulation";
   const trials = useMemo(
-    () => generateBalloons(props.seed, props.difficulty, total),
-    [props.seed, props.difficulty, total],
+    () => generateBalloons(props.seed, props.difficulty, total, props.mode === "tutorial" ? 1 : props.level),
+    [props.seed, props.difficulty, props.level, props.mode, total],
   );
   const telemetry = useGameTelemetry(props.sessionId, "balloon");
   const startedAt = useRef(new Date().toISOString());
@@ -60,12 +60,15 @@ export function BalloonGame(props: GameProps) {
           gameId: "balloon",
           mode: props.mode,
           difficulty: props.difficulty,
+          level: props.level,
           seed: props.seed,
           startedAt: startedAt.current,
           rounds: nextRounds,
           telemetry: telemetry.events,
           score: balloonScore(adjustedAveragePumps, props.difficulty),
           metrics: {
+            level: props.level,
+            balloonCount: total,
             adjustedAveragePumps,
             bankedMoney: nextBanked,
             explosions: nextExplosions,

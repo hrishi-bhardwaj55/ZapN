@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { generateDigits, nextAdaptiveSpan, taskForRound, transformDigits } from "../../games/pincode/engine";
+import { digitLevelSettings, generateDigits, nextAdaptiveSpan, taskForRound, transformDigits } from "../../games/pincode/engine";
 
 describe("Pincode engine", () => {
   it("supports forward, reverse, and duplicate-safe sorting", () => {
@@ -23,5 +23,15 @@ describe("Pincode engine", () => {
   });
   it("reproduces digit sequences", () => {
     expect(generateDigits("digits", 2, 7)).toEqual(generateDigits("digits", 2, 7));
+  });
+  it("makes level 5 memory load higher and timing tighter than level 1", () => {
+    const level1 = digitLevelSettings(1);
+    const level5 = digitLevelSettings(5);
+    expect(level5.initialSpan).toBeGreaterThan(level1.initialSpan);
+    expect(level5.maximumSpan).toBeGreaterThan(level1.maximumSpan);
+    expect(level5.interDigitDelayMs).toBeLessThan(level1.interDigitDelayMs);
+    expect(level5.recallWindowMs).toBeLessThan(level1.recallWindowMs);
+    expect(nextAdaptiveSpan(level5.initialSpan, true, level5.minimumSpan, level5.maximumSpan)).toBe(9);
+    expect(nextAdaptiveSpan(level5.maximumSpan, true, level5.minimumSpan, level5.maximumSpan)).toBe(10);
   });
 });

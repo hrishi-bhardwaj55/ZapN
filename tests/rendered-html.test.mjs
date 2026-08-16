@@ -21,6 +21,9 @@ test("server-renders the complete Cortex practice library", async () => {
   const html = await response.text();
   assert.match(html, /<title>Cortex Practice Lab<\/title>/i);
   assert.match(html, /Train the decisions/);
+  assert.match(html, /TRAINING LEVEL/);
+  assert.match(html, /L1/);
+  assert.match(html, /L5/);
   for (const game of ["Balloon", "Skyscraper", "Shapeshift", "Code Compare", "Digit", "Number Box", "Figure It Out", "The Switch", "Stock Master"]) {
     assert.match(html, new RegExp(game));
   }

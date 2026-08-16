@@ -1,8 +1,10 @@
 import { randomInt, seededRandom } from "@/lib/engine";
+import { levelValue } from "@/lib/levels";
+import type { GameLevel } from "@/lib/types";
 
 export const COLORS = ["navy", "teal", "amber", "coral"] as const;
 export const FIGURES = ["circle", "triangle", "square", "diamond"] as const;
-export const PATTERNS = ["solid", "striped", "outline"] as const;
+export const PATTERNS = ["solid", "striped", "outline", "dotted", "crossed"] as const;
 
 export interface FigureGuess {
   color: (typeof COLORS)[number];
@@ -10,18 +12,29 @@ export interface FigureGuess {
   pattern: (typeof PATTERNS)[number];
 }
 
-export function allCandidates(): FigureGuess[] {
-  return COLORS.flatMap((color) =>
-    FIGURES.flatMap((figure) => PATTERNS.map((pattern) => ({ color, figure, pattern }))),
+export function figureLevelSettings(level: GameLevel) {
+  return {
+    colors: COLORS.slice(0, levelValue(level, [2, 3, 4, 4, 4])) as FigureGuess["color"][],
+    figures: FIGURES.slice(0, levelValue(level, [3, 4, 4, 4, 4])) as FigureGuess["figure"][],
+    patterns: PATTERNS.slice(0, levelValue(level, [2, 2, 3, 4, 5])) as FigureGuess["pattern"][],
+    maxGuesses: levelValue(level, [8, 7, 6, 5, 4]),
+  };
+}
+
+export function allCandidates(level: GameLevel = 3): FigureGuess[] {
+  const profile = figureLevelSettings(level);
+  return profile.colors.flatMap((color) =>
+    profile.figures.flatMap((figure) => profile.patterns.map((pattern) => ({ color, figure, pattern }))),
   );
 }
 
-export function generateTarget(seed: string): FigureGuess {
+export function generateTarget(seed: string, level: GameLevel = 3): FigureGuess {
   const random = seededRandom(`${seed}:figure-target`);
+  const profile = figureLevelSettings(level);
   return {
-    color: COLORS[randomInt(random, 0, COLORS.length - 1)],
-    figure: FIGURES[randomInt(random, 0, FIGURES.length - 1)],
-    pattern: PATTERNS[randomInt(random, 0, PATTERNS.length - 1)],
+    color: profile.colors[randomInt(random, 0, profile.colors.length - 1)],
+    figure: profile.figures[randomInt(random, 0, profile.figures.length - 1)],
+    pattern: profile.patterns[randomInt(random, 0, profile.patterns.length - 1)],
   };
 }
 

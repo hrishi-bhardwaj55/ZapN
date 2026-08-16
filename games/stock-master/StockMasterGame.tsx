@@ -1,15 +1,20 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { buildResult, difficultyValue, mean } from "@/lib/engine";
+import { buildResult, mean } from "@/lib/engine";
 import type { GameProps, RoundRecord } from "@/lib/types";
 import { Feedback, GameShell, useGameTelemetry } from "../shared";
-import { escalatedVelocity, gaugeClickOutcome, generateGauges, normalizeAngle, rescheduleGauge, targetContains, targetPassState, type GaugeState } from "./engine";
+import { escalatedVelocity, gaugeClickOutcome, generateGauges, normalizeAngle, rescheduleGauge, stockLevelSettings, targetContains, targetPassState, type GaugeState } from "./engine";
 
 export function StockMasterGame(props: GameProps) {
-  const gaugeCount = props.mode === "tutorial" ? 4 : difficultyValue(props.difficulty, { easy: 4, medium: 4, hard: 6 });
-  const total = props.mode === "tutorial" ? 6 : props.config?.trials ?? difficultyValue(props.difficulty, { easy: 9, medium: 11, hard: 13 });
-  const initialGauges = useMemo(() => generateGauges(props.seed, gaugeCount, props.difficulty === "hard"), [gaugeCount, props.difficulty, props.seed]);
+  const activeLevel = props.mode === "tutorial" ? 3 : props.level;
+  const profile = useMemo(() => stockLevelSettings(activeLevel), [activeLevel]);
+  const gaugeCount = props.mode === "tutorial" ? 4 : profile.gaugeCount;
+  const total = props.mode === "tutorial" ? 6 : props.config?.trials || profile.total;
+  const initialGauges = useMemo(
+    () => generateGauges(props.seed, gaugeCount, profile),
+    [gaugeCount, profile, props.seed],
+  );
   const gaugesRef = useRef<GaugeState[]>(initialGauges);
   const targetSeenRef = useRef(initialGauges.map((gauge) => targetContains(gauge.angle, gauge.targetStartAngle, gauge.targetEndAngle)));
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -129,6 +134,7 @@ export function StockMasterGame(props: GameProps) {
               gameId: "stock-master",
               mode: props.mode,
               difficulty: props.difficulty,
+              level: props.level,
               seed: props.seed,
               startedAt: startedAt.current,
               rounds: records,
@@ -145,13 +151,18 @@ export function StockMasterGame(props: GameProps) {
                 meanTimeToTargetAtClick: mean(records.map((record) => Number(record.response.split(":")[3]))),
                 gaugeCount,
                 bestStreak: bestStreakRef.current,
+                targetZoneWidth: profile.targetWidth,
+                initialMinVelocity: profile.minVelocity,
+                initialMaxVelocity: profile.maxVelocity,
+                arrivalSpacingMs: profile.arrivalSpacingSeconds * 1000,
+                level: props.level,
               },
             }),
           ),
         650,
       );
     },
-    [gaugeCount, props, telemetry, total],
+    [gaugeCount, profile, props, telemetry, total],
   );
 
   useEffect(() => {

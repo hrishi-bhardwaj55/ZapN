@@ -1,15 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { buildResult, difficultyValue } from "@/lib/engine";
+import { buildResult } from "@/lib/engine";
 import type { GameProps, RoundRecord } from "@/lib/types";
 import { Feedback, GameShell, useGameTelemetry } from "../shared";
-import { generateDigits, nextAdaptiveSpan, taskForRound, transformDigits, type MemoryTask } from "./engine";
+import { digitLevelSettings, generateDigits, nextAdaptiveSpan, taskForRound, transformDigits, type MemoryTask } from "./engine";
 
 export function PincodeGame(props: GameProps) {
-  const total = Math.max(3, props.mode === "tutorial" ? 3 : props.config?.trials ?? difficultyValue(props.difficulty, { easy: 4, medium: 5, hard: 6 }));
-  const initialSpan = difficultyValue(props.difficulty, { easy: 4, medium: 5, hard: 6 });
-  const responseWindow = props.config?.timeLimitMs || difficultyValue(props.difficulty, { easy: 12000, medium: 10000, hard: 8000 });
+  const levelSettings = useMemo(() => digitLevelSettings(props.mode === "tutorial" ? 1 : props.level), [props.level, props.mode]);
+  const total = Math.max(3, props.mode === "tutorial" ? 3 : props.config?.trials || levelSettings.trials);
+  const initialSpan = levelSettings.initialSpan;
+  const responseWindow = props.mode === "tutorial" ? 14000 : props.config?.timeLimitMs || levelSettings.recallWindowMs;
+  const interDigitDelay = props.mode === "tutorial" ? 900 : props.config?.interDigitDelayMs || levelSettings.interDigitDelayMs;
   const telemetry = useGameTelemetry(props.sessionId, "pincode");
   const startedAt = useRef(new Date().toISOString());
   const recallShownAt = useRef(0);
@@ -35,14 +37,13 @@ export function PincodeGame(props: GameProps) {
   useEffect(() => {
     if (props.paused || phase !== "show") return;
     telemetry.record("STIMULUS_SHOWN", round, { digits, task, span });
-    const interDigitDelay = props.config?.interDigitDelayMs ?? 650;
     const timers = digits.map((_, index) => window.setTimeout(() => setVisibleIndex(index), index * interDigitDelay));
     const timeout = window.setTimeout(() => {
       setPhase("recall");
       recallShownAt.current = performance.now();
     }, digits.length * interDigitDelay + 350);
     return () => { window.clearTimeout(timeout); timers.forEach((timer) => window.clearTimeout(timer)); };
-  }, [digits, phase, props.config?.interDigitDelayMs, props.paused, round, span, task, telemetry]);
+  }, [digits, interDigitDelay, phase, props.paused, round, span, task, telemetry]);
 
   useEffect(() => {
     if (!props.paused && phase === "recall") recallShownAt.current = performance.now();
@@ -86,11 +87,17 @@ export function PincodeGame(props: GameProps) {
           gameId: "pincode",
           mode: props.mode,
           difficulty: props.difficulty,
+          level: props.level,
           seed: props.seed,
           startedAt: startedAt.current,
           rounds: records,
           telemetry: telemetry.events,
           metrics: {
+            level: props.level,
+            startingSpan: levelSettings.initialSpan,
+            maximumSpan: levelSettings.maximumSpan,
+            interDigitDelayMs: interDigitDelay,
+            recallWindowMs: responseWindow,
             workingMemorySpan: correctSpans.length ? Math.max(...correctSpans) : 0,
             forwardMaxSpan: maxSpanFor("forward"),
             reverseMaxSpan: maxSpanFor("reverse"),
@@ -112,7 +119,7 @@ export function PincodeGame(props: GameProps) {
         }),
       );
     },
-    [props, spans, telemetry, total],
+    [interDigitDelay, levelSettings.initialSpan, levelSettings.maximumSpan, props, responseWindow, spans, telemetry, total],
   );
 
   const submit = useCallback((timedOut = false) => {
@@ -135,7 +142,9 @@ export function PincodeGame(props: GameProps) {
     telemetry.record(correct ? "CORRECT_RESPONSE" : "INCORRECT_RESPONSE", round, { expected });
     setFeedback({ tone: correct ? "good" : "bad", text: correct ? `${span}-digit recall correct` : `Correct sequence: ${expected}` });
     setPhase("feedback");
-    const nextSpan = props.config?.adaptive === false ? span : nextAdaptiveSpan(span, correct);
+    const nextSpan = props.config?.adaptive === false
+      ? span
+      : nextAdaptiveSpan(span, correct, levelSettings.minimumSpan, levelSettings.maximumSpan);
     window.setTimeout(() => {
       if (round + 1 >= total) complete(records);
       else {
@@ -149,7 +158,7 @@ export function PincodeGame(props: GameProps) {
         telemetry.record("LEVEL_CHANGED", round + 1, { task, span: nextSpan });
       }
     }, props.mode === "tutorial" ? 1000 : 650);
-  }, [complete, digits, expected, input, phase, props.config?.adaptive, props.mode, props.paused, responseWindow, round, span, task, telemetry, total]);
+  }, [complete, digits, expected, input, levelSettings.maximumSpan, levelSettings.minimumSpan, phase, props.config?.adaptive, props.mode, props.paused, responseWindow, round, span, task, telemetry, total]);
 
   useEffect(() => {
     if (props.paused || !props.timed || props.mode === "tutorial" || phase !== "recall") return;

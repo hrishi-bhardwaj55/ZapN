@@ -1,16 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { buildResult, difficultyValue, mean } from "@/lib/engine";
+import { buildResult, mean } from "@/lib/engine";
 import type { GameProps, RoundRecord } from "@/lib/types";
 import { Feedback, GameShell, useGameTelemetry } from "../shared";
-import { allCandidates, COLORS, FIGURES, figureFeedback, generateTarget, PATTERNS, reduceCandidates, sameGuess, type FigureGuess } from "./engine";
+import { allCandidates, figureFeedback, figureLevelSettings, generateTarget, reduceCandidates, sameGuess, type FigureGuess } from "./engine";
 
 const symbols: Record<FigureGuess["figure"], Record<FigureGuess["pattern"], string>> = {
-  circle: { solid: "●", striped: "◉", outline: "○" },
-  triangle: { solid: "▲", striped: "◭", outline: "△" },
-  square: { solid: "■", striped: "▦", outline: "□" },
-  diamond: { solid: "◆", striped: "◈", outline: "◇" },
+  circle: { solid: "●", striped: "◉", outline: "○", dotted: "⦿", crossed: "⊗" },
+  triangle: { solid: "▲", striped: "◭", outline: "△", dotted: "⛛", crossed: "⨻" },
+  square: { solid: "■", striped: "▦", outline: "□", dotted: "▧", crossed: "⊠" },
+  diamond: { solid: "◆", striped: "◈", outline: "◇", dotted: "⬖", crossed: "❖" },
 };
 
 function figureLabel(figure: FigureGuess) {
@@ -18,13 +18,15 @@ function figureLabel(figure: FigureGuess) {
 }
 
 export function FigureItOutGame(props: GameProps) {
-  const maxGuesses = props.mode === "tutorial" ? 7 : props.config?.trials ?? difficultyValue(props.difficulty, { easy: 8, medium: 7, hard: 6 });
-  const target = useMemo(() => generateTarget(props.seed), [props.seed]);
+  const activeLevel = props.mode === "tutorial" ? 3 : props.level;
+  const profile = useMemo(() => figureLevelSettings(activeLevel), [activeLevel]);
+  const maxGuesses = props.mode === "tutorial" ? 7 : props.config?.trials || profile.maxGuesses;
+  const target = useMemo(() => generateTarget(props.seed, activeLevel), [activeLevel, props.seed]);
   const telemetry = useGameTelemetry(props.sessionId, "figure-it-out");
   const startedAt = useRef(new Date().toISOString());
   const shownAt = useRef(0);
   const roundsRef = useRef<RoundRecord[]>([]);
-  const candidatesRef = useRef(allCandidates());
+  const candidatesRef = useRef(allCandidates(activeLevel));
   const gainsRef = useRef<number[]>([]);
   const finished = useRef(false);
   const [guess, setGuess] = useState<FigureGuess>({ color: "navy", figure: "circle", pattern: "solid" });
@@ -77,6 +79,7 @@ export function FigureItOutGame(props: GameProps) {
             gameId: "figure-it-out",
             mode: props.mode,
             difficulty: props.difficulty,
+            level: props.level,
             seed: props.seed,
             startedAt: startedAt.current,
             rounds: records,
@@ -89,6 +92,8 @@ export function FigureItOutGame(props: GameProps) {
               repeatedGuesses: nextGuesses.filter((entry, index, array) => array.slice(0, index).some((prior) => sameGuess(prior.guess, entry.guess))).length,
               averageInformationGain: mean(gainsRef.current),
               remainingCandidates: nextCandidates.length,
+              candidateSpace: allCandidates(activeLevel).length,
+              level: props.level,
             },
           }),
         ),
@@ -110,9 +115,9 @@ export function FigureItOutGame(props: GameProps) {
           <span>{symbols[guess.figure][guess.pattern]}</span>
         </div>
         <div className="attribute-controls">
-          <label><span>Color</span><select disabled={props.paused || outcome !== null} value={guess.color} onChange={(event) => setGuess({ ...guess, color: event.target.value as FigureGuess["color"] })}>{COLORS.map((color) => <option key={color}>{color}</option>)}</select></label>
-          <label><span>Shape</span><select disabled={props.paused || outcome !== null} value={guess.figure} onChange={(event) => setGuess({ ...guess, figure: event.target.value as FigureGuess["figure"] })}>{FIGURES.map((figure) => <option key={figure}>{figure}</option>)}</select></label>
-          <label><span>Pattern</span><select disabled={props.paused || outcome !== null} value={guess.pattern} onChange={(event) => setGuess({ ...guess, pattern: event.target.value as FigureGuess["pattern"] })}>{PATTERNS.map((pattern) => <option key={pattern}>{pattern}</option>)}</select></label>
+          <label><span>Color</span><select disabled={props.paused || outcome !== null} value={guess.color} onChange={(event) => setGuess({ ...guess, color: event.target.value as FigureGuess["color"] })}>{profile.colors.map((color) => <option key={color}>{color}</option>)}</select></label>
+          <label><span>Shape</span><select disabled={props.paused || outcome !== null} value={guess.figure} onChange={(event) => setGuess({ ...guess, figure: event.target.value as FigureGuess["figure"] })}>{profile.figures.map((figure) => <option key={figure}>{figure}</option>)}</select></label>
+          <label><span>Pattern</span><select disabled={props.paused || outcome !== null} value={guess.pattern} onChange={(event) => setGuess({ ...guess, pattern: event.target.value as FigureGuess["pattern"] })}>{profile.patterns.map((pattern) => <option key={pattern}>{pattern}</option>)}</select></label>
         </div>
         <button className="btn primary wide" disabled={props.paused || outcome !== null} onClick={submit}>Submit guess</button>
       </div>

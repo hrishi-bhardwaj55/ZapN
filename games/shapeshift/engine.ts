@@ -1,5 +1,6 @@
 import { median, randomInt, seededRandom, shuffle } from "@/lib/engine";
-import type { RoundRecord } from "@/lib/types";
+import { levelValue } from "@/lib/levels";
+import type { GameLevel, RoundRecord } from "@/lib/types";
 
 export const SHAPES = ["circle", "square"] as const;
 export const DIRECTIONS = ["ArrowLeft", "ArrowRight"] as const;
@@ -27,12 +28,37 @@ const CONDITIONS: Array<Omit<ShapeTrial, "preStimulusMs">> = [
   { shape: "square", position: "right", correctDirection: "ArrowRight", congruent: true },
 ];
 
-export function generateShapeTrials(seed: string, count: number): ShapeTrial[] {
+export interface ShapeLevelProfile {
+  trials: number;
+  responseWindowMs: number;
+  preparationRangeMs: readonly [number, number];
+  incongruentRatio: number;
+}
+
+export function shapeLevelProfile(level: GameLevel): ShapeLevelProfile {
+  return levelValue(level, [
+    { trials: 8, responseWindowMs: 2200, preparationRangeMs: [900, 1400], incongruentRatio: 0.25 },
+    { trials: 10, responseWindowMs: 1800, preparationRangeMs: [700, 1100], incongruentRatio: 0.4 },
+    { trials: 12, responseWindowMs: 1400, preparationRangeMs: [550, 1000], incongruentRatio: 0.5 },
+    { trials: 16, responseWindowMs: 1000, preparationRangeMs: [350, 700], incongruentRatio: 0.625 },
+    { trials: 20, responseWindowMs: 700, preparationRangeMs: [180, 450], incongruentRatio: 0.75 },
+  ] as const);
+}
+
+export function generateShapeTrials(seed: string, count: number, level: GameLevel = 3): ShapeTrial[] {
   const random = seededRandom(seed);
-  const conditions = Array.from({ length: count }, (_, index) => CONDITIONS[index % CONDITIONS.length]);
+  const profile = shapeLevelProfile(level);
+  const incongruentCount = Math.min(count, Math.round(count * profile.incongruentRatio));
+  const congruentCount = count - incongruentCount;
+  const congruentConditions = CONDITIONS.filter((condition) => condition.congruent);
+  const incongruentConditions = CONDITIONS.filter((condition) => !condition.congruent);
+  const conditions = [
+    ...Array.from({ length: congruentCount }, (_, index) => congruentConditions[index % congruentConditions.length]),
+    ...Array.from({ length: incongruentCount }, (_, index) => incongruentConditions[index % incongruentConditions.length]),
+  ];
   return shuffle(conditions, random).map((condition) => ({
     ...condition,
-    preStimulusMs: randomInt(random, 250, 700),
+    preStimulusMs: randomInt(random, profile.preparationRangeMs[0], profile.preparationRangeMs[1]),
   }));
 }
 

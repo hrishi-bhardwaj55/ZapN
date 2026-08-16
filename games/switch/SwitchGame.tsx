@@ -1,16 +1,20 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { buildResult, difficultyValue } from "@/lib/engine";
+import { buildResult } from "@/lib/engine";
 import type { GameProps, RoundRecord } from "@/lib/types";
 import { Feedback, GameShell, useGameTelemetry } from "../shared";
-import { calculateSwitchCost, generateSwitchTrials } from "./engine";
+import { calculateSwitchCost, generateSwitchTrials, switchLevelSettings } from "./engine";
 
 export function SwitchGame(props: GameProps) {
-  const total = props.mode === "tutorial" ? 6 : props.config?.trials ?? difficultyValue(props.difficulty, { easy: 10, medium: 14, hard: 18 });
-  const responseWindow = props.config?.timeLimitMs || difficultyValue(props.difficulty, { easy: 2800, medium: 2000, hard: 1400 });
-  const sequenceLength = difficultyValue(props.difficulty, { easy: 3, medium: 4, hard: 5 });
-  const trials = useMemo(() => generateSwitchTrials(props.seed, total, sequenceLength), [props.seed, sequenceLength, total]);
+  const activeLevel = props.mode === "tutorial" ? 3 : props.level;
+  const profile = useMemo(() => switchLevelSettings(activeLevel), [activeLevel]);
+  const total = props.mode === "tutorial" ? 6 : props.config?.trials || profile.total;
+  const responseWindow = props.mode === "tutorial" ? profile.responseWindowMs : props.config?.timeLimitMs || profile.responseWindowMs;
+  const trials = useMemo(
+    () => generateSwitchTrials(props.seed, total, profile.sequenceLength, profile.switchRate),
+    [profile, props.seed, total],
+  );
   const telemetry = useGameTelemetry(props.sessionId, "switch");
   const startedAt = useRef(new Date().toISOString());
   const shownAt = useRef(0);
@@ -35,6 +39,7 @@ export function SwitchGame(props: GameProps) {
       gameId: "switch",
       mode: props.mode,
       difficulty: props.difficulty,
+      level: props.level,
       seed: props.seed,
       startedAt: startedAt.current,
       rounds: records,
@@ -47,9 +52,14 @@ export function SwitchGame(props: GameProps) {
         repeatAccuracy: repeatRecords.length ? (repeatRecords.filter((record) => record.correct).length / repeatRecords.length) * 100 : 0,
         positionErrors: records.filter((record) => !record.correct && record.response !== "timeout").length,
         timeouts: records.filter((record) => record.response === "timeout").length,
+        sequenceLength: profile.sequenceLength,
+        responseWindowMs: responseWindow,
+        switchRateTarget: profile.switchRate * 100,
+        actualSwitchRate: records.length > 1 ? (switchRecords.length / (records.length - 1)) * 100 : 0,
+        level: props.level,
       },
     }));
-  }, [props, telemetry, total]);
+  }, [profile, props, responseWindow, telemetry, total]);
 
   const respond = useCallback((answer: boolean | "timeout") => {
     if (pausedRef.current || locked.current || finished.current) return;

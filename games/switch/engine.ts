@@ -1,5 +1,6 @@
 import { mean, randomInt, seededRandom, shuffle } from "@/lib/engine";
-import type { RoundRecord } from "@/lib/types";
+import { levelValue } from "@/lib/levels";
+import type { GameLevel, RoundRecord } from "@/lib/types";
 
 export type SwitchTask = "NUMBER" | "ARROWS";
 export type SwitchPosition = "top" | "bottom";
@@ -29,12 +30,58 @@ export function arrowsMatch(top: string[], bottom: string[]) {
   return top.length === bottom.length && top.every((arrow, index) => arrow === bottom[index]);
 }
 
-export function generateSwitchTrials(seed: string, count: number, sequenceLength = 4): SwitchTrial[] {
+export function switchLevelSettings(level: GameLevel) {
+  return {
+    total: levelValue(level, [10, 12, 14, 16, 18]),
+    sequenceLength: levelValue(level, [3, 4, 5, 6, 7]),
+    switchRate: levelValue(level, [0.25, 0.4, 0.5, 0.7, 0.85]),
+    responseWindowMs: levelValue(level, [3000, 2500, 2000, 1550, 1150]),
+  };
+}
+
+function distributeAcrossRuns(total: number, runs: number, random: () => number) {
+  const lengths = Array.from({ length: runs }, () => 1);
+  for (let remaining = total - runs; remaining > 0; remaining -= 1) {
+    lengths[randomInt(random, 0, runs - 1)] += 1;
+  }
+  return shuffle(lengths, random);
+}
+
+function balancedPositions(count: number, switchRate: number, random: () => number): SwitchPosition[] {
+  if (count <= 1) return ["top"].slice(0, count) as SwitchPosition[];
+  const topCount = Math.ceil(count / 2);
+  const bottomCount = Math.floor(count / 2);
+  const requestedSwitches = Math.max(1, Math.min(count - 1, Math.round((count - 1) * switchRate)));
+
+  for (let distance = 0; distance < count; distance += 1) {
+    for (const switches of [requestedSwitches - distance, requestedSwitches + distance]) {
+      if (switches < 1 || switches >= count) continue;
+      const runCount = switches + 1;
+      const starts = shuffle(["top", "bottom"] as SwitchPosition[], random);
+      for (const start of starts) {
+        const topRuns = start === "top" ? Math.ceil(runCount / 2) : Math.floor(runCount / 2);
+        const bottomRuns = runCount - topRuns;
+        if (topRuns > topCount || bottomRuns > bottomCount) continue;
+        const topLengths = distributeAcrossRuns(topCount, topRuns, random);
+        const bottomLengths = distributeAcrossRuns(bottomCount, bottomRuns, random);
+        const positions: SwitchPosition[] = [];
+        let topIndex = 0;
+        let bottomIndex = 0;
+        for (let run = 0; run < runCount; run += 1) {
+          const position = run % 2 === 0 ? start : start === "top" ? "bottom" : "top";
+          const length = position === "top" ? topLengths[topIndex++] : bottomLengths[bottomIndex++];
+          positions.push(...Array.from({ length }, () => position));
+        }
+        return positions;
+      }
+    }
+  }
+  return shuffle(Array.from({ length: count }, (_, index) => (index < topCount ? "top" : "bottom") as SwitchPosition), random);
+}
+
+export function generateSwitchTrials(seed: string, count: number, sequenceLength = 4, switchRate = 0.5): SwitchTrial[] {
   const random = seededRandom(`${seed}:switch-position`);
-  const positions = shuffle(
-    Array.from({ length: count }, (_, index) => (index % 2 === 0 ? "top" : "bottom") as SwitchPosition),
-    random,
-  );
+  const positions = balancedPositions(count, switchRate, random);
   const trials: SwitchTrial[] = [];
   let previousTask: SwitchTask | null = null;
 

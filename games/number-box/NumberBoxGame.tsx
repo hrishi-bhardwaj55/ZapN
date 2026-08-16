@@ -1,13 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { buildResult, difficultyValue, mean } from "@/lib/engine";
+import { buildResult, mean } from "@/lib/engine";
 import type { GameProps, RoundRecord } from "@/lib/types";
 import { Feedback, GameShell, useGameTelemetry } from "../shared";
 import {
   combineWorkingValues,
   generateNumberPuzzles,
   initialWorkingValues,
+  meetsOperatorRequirements,
+  numberBoxLevelSettings,
   type NumberOperator,
   type WorkingValue,
 } from "./engine";
@@ -25,8 +27,11 @@ function formatValue(value: number) {
 }
 
 export function NumberBoxGame(props: GameProps) {
-  const total = props.mode === "tutorial" ? 2 : props.config?.trials ?? difficultyValue(props.difficulty, { easy: 3, medium: 4, hard: 5 });
-  const puzzles = useMemo(() => generateNumberPuzzles(props.seed, total), [props.seed, total]);
+  const effectiveLevel = props.mode === "tutorial" ? 1 : props.level;
+  const levelSettings = useMemo(() => numberBoxLevelSettings(effectiveLevel), [effectiveLevel]);
+  const total = props.mode === "tutorial" ? 2 : props.config?.trials || levelSettings.trials;
+  const responseWindow = props.mode === "tutorial" ? 120000 : props.config?.timeLimitMs || levelSettings.responseWindowMs;
+  const puzzles = useMemo(() => generateNumberPuzzles(props.seed, total, effectiveLevel), [effectiveLevel, props.seed, total]);
   const telemetry = useGameTelemetry(props.sessionId, "number-box");
   const startedAt = useRef(new Date().toISOString());
   const shownAt = useRef(0);
@@ -60,11 +65,16 @@ export function NumberBoxGame(props: GameProps) {
           gameId: "number-box",
           mode: props.mode,
           difficulty: props.difficulty,
+          level: props.level,
           seed: props.seed,
           startedAt: startedAt.current,
           rounds: records,
           telemetry: telemetry.events,
           metrics: {
+            level: props.level,
+            responseWindowMs: responseWindow,
+            requiredOperatorCount: levelSettings.requiredOperators.length,
+            averageSolutionCount: mean(puzzles.map((puzzle) => puzzle.solutionCount)),
             solveRate: records.length ? (records.filter((record) => record.correct).length / records.length) * 100 : 0,
             averageSolveTimeMs: mean(records.filter((record) => record.correct).map((record) => record.reactionTimeMs)),
             skippedPuzzles: records.filter((record) => record.response === "skip").length,
@@ -75,7 +85,7 @@ export function NumberBoxGame(props: GameProps) {
         }),
       );
     },
-    [props, telemetry, total],
+    [levelSettings.requiredOperators.length, props, puzzles, responseWindow, telemetry, total],
   );
 
   const advance = useCallback(
@@ -165,10 +175,15 @@ export function NumberBoxGame(props: GameProps) {
       setFeedback({ tone: "bad", text: `That equals ${formatValue(final.value)}, not 24. Undo or reset and try again.` });
       return;
     }
+    if (!meetsOperatorRequirements(final.expression, puzzles[round].requiredOperators)) {
+      invalidAttemptsRef.current += 1;
+      setFeedback({ tone: "bad", text: `Make 24 while using ${puzzles[round].requiredOperators.join(" and ")}. Undo or reset and try again.` });
+      return;
+    }
     setFeedback({ tone: "good", text: `Made 24 in ${Math.round(reactionTimeMs / 100) / 10}s.` });
     advance({
       round: round + 1,
-      stimulus: `${puzzles[round].numbers.join(",")}=>24`,
+      stimulus: `${puzzles[round].numbers.join(",")}=>24:${puzzles[round].requiredOperators.join("")}`,
       response: final.expression,
       correct: true,
       reactionTimeMs,
@@ -185,7 +200,7 @@ export function NumberBoxGame(props: GameProps) {
     setFeedback({ tone: "neutral", text: `Skipped · one solution is ${puzzle.solution}.` });
     advance({
       round: round + 1,
-      stimulus: `${puzzle.numbers.join(",")}=>24`,
+      stimulus: `${puzzle.numbers.join(",")}=>24:${puzzle.requiredOperators.join("")}`,
       response: "skip",
       correct: false,
       reactionTimeMs,
@@ -193,7 +208,32 @@ export function NumberBoxGame(props: GameProps) {
     });
   };
 
+  const timeOut = useCallback(() => {
+    if (props.paused || locked.current || finished.current) return;
+    const puzzle = puzzles[round];
+    telemetry.record("TIMEOUT", round, { solution: puzzle.solution });
+    telemetry.record("INCORRECT_RESPONSE", round, { solution: puzzle.solution });
+    setFeedback({ tone: "neutral", text: `Time expired · one solution is ${puzzle.solution}.` });
+    advance({
+      round: round + 1,
+      stimulus: `${puzzle.numbers.join(",")}=>24:${puzzle.requiredOperators.join("")}`,
+      response: "timeout",
+      correct: false,
+      reactionTimeMs: responseWindow,
+      score: 0,
+    });
+  }, [advance, props.paused, puzzles, responseWindow, round, telemetry]);
+
+  useEffect(() => {
+    if (props.paused || !props.timed || props.mode === "tutorial" || locked.current || finished.current) return;
+    const timeout = window.setTimeout(timeOut, responseWindow);
+    return () => window.clearTimeout(timeout);
+  }, [props.mode, props.paused, props.timed, responseWindow, round, timeOut]);
+
   const puzzle = puzzles[round];
+  const requiredOperatorLabel = puzzle.requiredOperators.length
+    ? `Required: ${puzzle.requiredOperators.join(" and ")}`
+    : "Any operations";
   return (
     <GameShell
       title="Number Box"
@@ -201,7 +241,7 @@ export function NumberBoxGame(props: GameProps) {
       round={round}
       total={total}
       score={`${values.length} value${values.length === 1 ? "" : "s"} left`}
-      aside={<div><span className="aside-label">CONSTRAINT</span><strong>Make 24</strong><p>Use all four supplied numbers exactly once. Each operation collapses two values into one.</p>{props.debug && props.mode !== "simulation" && <code>debug · {puzzle.solution}</code>}</div>}
+      aside={<div><span className="aside-label">CONSTRAINT</span><strong>{requiredOperatorLabel}</strong><p>Use all four supplied numbers exactly once. Each operation collapses two values into one.</p>{props.debug && props.mode !== "simulation" && <code>debug · {puzzle.solution} · {puzzle.solutionCount} routes</code>}</div>}
     >
       <div className="target-number"><small>TARGET</small><strong>24</strong></div>
       <p className="prompt-line">

@@ -54,6 +54,7 @@ export function exportCsv(history: GameResult[]) {
   const header = [
     "timestamp",
     "game",
+    "level",
     "round",
     "stimulus",
     "response",
@@ -65,6 +66,7 @@ export function exportCsv(history: GameResult[]) {
     attempt.rounds.map((round) => [
       attempt.completedAt,
       attempt.gameId,
+      attempt.level ?? 3,
       round.round,
       round.stimulus,
       round.response,

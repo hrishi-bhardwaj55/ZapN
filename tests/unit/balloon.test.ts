@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { generateBalloons, pumpBalloon, balloonScore, cashOutValue, explosionPenalty } from "../../games/balloon/engine";
+import {
+  balloonCountForLevel,
+  balloonRiskProfile,
+  generateBalloons,
+  pumpBalloon,
+  balloonScore,
+  cashOutValue,
+  explosionPenalty,
+} from "../../games/balloon/engine";
 
 describe("Balloon engine", () => {
   it("explodes on the exact hidden breakpoint", () => {
@@ -35,5 +43,18 @@ describe("Balloon engine", () => {
       "blue", "yellow", "orange", "blue", "yellow", "orange",
       "blue", "yellow", "orange", "blue", "yellow", "orange",
     ]);
+  });
+
+  it("makes level 5 longer and gives its risk profiles substantially more overlap than level 1", () => {
+    const foundation = balloonRiskProfile(1, "medium");
+    const extreme = balloonRiskProfile(5, "medium");
+    const overlap = (left: readonly [number, number], right: readonly [number, number]) =>
+      Math.max(0, Math.min(left[1], right[1]) - Math.max(left[0], right[0]) + 1);
+    const overlapScore = (profile: ReturnType<typeof balloonRiskProfile>) =>
+      overlap(profile.blue, profile.yellow) + overlap(profile.yellow, profile.orange);
+
+    expect(balloonCountForLevel(5)).toBeGreaterThan(balloonCountForLevel(1));
+    expect(overlapScore(extreme)).toBeGreaterThan(overlapScore(foundation));
+    expect(generateBalloons("level-seed", "medium", balloonCountForLevel(5), 5)).toHaveLength(20);
   });
 });

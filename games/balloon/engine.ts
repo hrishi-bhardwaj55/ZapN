@@ -1,23 +1,50 @@
 import { difficultyValue, randomInt, seededRandom } from "@/lib/engine";
-import type { Difficulty } from "@/lib/types";
+import { levelValue } from "@/lib/levels";
+import type { Difficulty, GameLevel } from "@/lib/types";
 
 export interface BalloonTrial {
   color: "blue" | "yellow" | "orange";
   breakpoint: number;
 }
 
-const ranges = {
-  easy: { blue: [8, 14], yellow: [5, 10], orange: [3, 7] },
-  medium: { blue: [7, 16], yellow: [4, 11], orange: [2, 8] },
-  hard: { blue: [6, 18], yellow: [3, 12], orange: [2, 9] },
-} as const;
+type RiskRange = readonly [number, number];
+type RiskProfile = Record<BalloonTrial["color"], RiskRange>;
+
+const LEVEL_RANGES: readonly [RiskProfile, RiskProfile, RiskProfile, RiskProfile, RiskProfile] = [
+  { blue: [10, 15], yellow: [6, 9], orange: [3, 5] },
+  { blue: [9, 16], yellow: [6, 12], orange: [3, 8] },
+  { blue: [7, 16], yellow: [4, 11], orange: [2, 8] },
+  { blue: [6, 18], yellow: [4, 15], orange: [2, 10] },
+  { blue: [5, 18], yellow: [4, 17], orange: [2, 15] },
+];
+
+export function balloonCountForLevel(level: GameLevel) {
+  return levelValue(level, [8, 10, 12, 16, 20] as const);
+}
+
+export function balloonRiskProfile(level: GameLevel, difficulty: Difficulty): RiskProfile {
+  const profile = levelValue(level, LEVEL_RANGES);
+  const adjustment = difficultyValue(difficulty, {
+    easy: { min: 1, max: -1 },
+    medium: { min: 0, max: 0 },
+    hard: { min: -1, max: 2 },
+  });
+  return Object.fromEntries(
+    Object.entries(profile).map(([color, [min, max]]) => [
+      color,
+      [Math.max(2, min + adjustment.min), Math.max(3, max + adjustment.max)] as RiskRange,
+    ]),
+  ) as RiskProfile;
+}
 
 export function generateBalloons(
   seed: string,
   difficulty: Difficulty,
   count: number,
+  level: GameLevel = 3,
 ): BalloonTrial[] {
   const random = seededRandom(`${seed}:balloon`);
+  const ranges = balloonRiskProfile(level, difficulty);
   const colors: BalloonTrial["color"][] = ["blue", "yellow", "orange"];
   const trialColors = Array.from({ length: count }, (_, index) => colors[index % colors.length]);
   for (let index = trialColors.length - 1; index > 0; index -= 1) {
@@ -25,7 +52,7 @@ export function generateBalloons(
     [trialColors[index], trialColors[swapIndex]] = [trialColors[swapIndex], trialColors[index]];
   }
   return trialColors.map((color) => {
-    const [min, max] = ranges[difficulty][color];
+    const [min, max] = ranges[color];
     return { color, breakpoint: randomInt(random, min, max) };
   });
 }

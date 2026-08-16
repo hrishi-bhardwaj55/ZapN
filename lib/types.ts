@@ -1,4 +1,5 @@
 export type Difficulty = "easy" | "medium" | "hard";
+export type GameLevel = 1 | 2 | 3 | 4 | 5;
 export type GameMode = "tutorial" | "practice" | "simulation";
 
 export type GameId =
@@ -50,6 +51,7 @@ export interface GameResult {
   gameId: GameId;
   mode: GameMode;
   difficulty: Difficulty;
+  level: GameLevel;
   seed: string;
   configVersion: string;
   startedAt: string;
@@ -69,6 +71,7 @@ export interface GameResult {
 export interface GameProps {
   seed: string;
   difficulty: Difficulty;
+  level: GameLevel;
   mode: GameMode;
   timed: boolean;
   paused?: boolean;

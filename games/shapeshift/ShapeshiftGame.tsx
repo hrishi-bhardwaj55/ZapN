@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { buildResult, difficultyValue, standardDeviation } from "@/lib/engine";
+import { buildResult, standardDeviation } from "@/lib/engine";
 import type { GameProps, RoundRecord } from "@/lib/types";
 import { Feedback, GameShell, useGameTelemetry } from "../shared";
 import {
@@ -11,6 +11,7 @@ import {
   isCorrectShapeResponse,
   SHAPES,
   SHAPE_MAPPING,
+  shapeLevelProfile,
   type ShapeDirection,
 } from "./engine";
 
@@ -18,9 +19,13 @@ const symbols = { circle: "○", square: "□" } as const;
 const arrows: Record<ShapeDirection, string> = { ArrowLeft: "←", ArrowRight: "→" };
 
 export function ShapeshiftGame(props: GameProps) {
-  const total = props.mode === "tutorial" ? 4 : props.config?.trials ?? difficultyValue(props.difficulty, { easy: 8, medium: 10, hard: 12 });
-  const responseWindow = props.config?.timeLimitMs || difficultyValue(props.difficulty, { easy: 1800, medium: 1400, hard: 1100 });
-  const trials = useMemo(() => generateShapeTrials(props.seed, total), [props.seed, total]);
+  const levelProfile = shapeLevelProfile(props.mode === "tutorial" ? 1 : props.level);
+  const total = props.mode === "tutorial" ? 4 : props.config?.trials || levelProfile.trials;
+  const responseWindow = props.config?.timeLimitMs || levelProfile.responseWindowMs;
+  const trials = useMemo(
+    () => generateShapeTrials(props.seed, total, props.mode === "tutorial" ? 1 : props.level),
+    [props.level, props.mode, props.seed, total],
+  );
   const telemetry = useGameTelemetry(props.sessionId, "shapeshift");
   const startedAt = useRef(new Date().toISOString());
   const shownAt = useRef(0);
@@ -47,12 +52,19 @@ export function ShapeshiftGame(props: GameProps) {
           gameId: "shapeshift",
           mode: props.mode,
           difficulty: props.difficulty,
+          level: props.level,
           seed: props.seed,
           startedAt: startedAt.current,
           rounds: records,
           telemetry: telemetry.events,
           metrics: {
             ...simon,
+            level: props.level,
+            trialCount: total,
+            responseWindowMs: responseWindow,
+            incongruentPercentage: records.length
+              ? (records.filter((record) => record.stimulus.startsWith("incongruent:")).length / records.length) * 100
+              : 0,
             anticipations: records.filter(
               (record) => record.response !== "timeout" && isAnticipatory(record.reactionTimeMs),
             ).length,
@@ -62,7 +74,7 @@ export function ShapeshiftGame(props: GameProps) {
         }),
       );
     },
-    [props, telemetry, total],
+    [props, responseWindow, telemetry, total],
   );
 
   const submit = useCallback(
@@ -129,7 +141,7 @@ export function ShapeshiftGame(props: GameProps) {
         position: trial.position,
         congruent: trial.congruent,
       });
-    }, 300 + trial.preStimulusMs);
+    }, trial.preStimulusMs);
     return () => window.clearTimeout(timeout);
   }, [feedback, props.paused, round, stimulusVisible, telemetry, trials]);
 

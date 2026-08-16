@@ -5,6 +5,7 @@ import {
   generateGauges,
   normalizeAngle,
   rescheduleGauge,
+  stockLevelSettings,
   targetContains,
   targetPassState,
 } from "../../games/stock-master/engine";
@@ -47,5 +48,24 @@ describe("Stock Master engine", () => {
     const gauges = generateGauges("gauges", 6, true);
     expect(gauges).toEqual(generateGauges("gauges", 6, true));
     expect(gauges.map((gauge) => gauge.id)).toEqual([0, 1, 2, 3, 4, 5]);
+  });
+  it("makes level five denser, faster, narrower, and more overlapping than level one", () => {
+    const levelOne = stockLevelSettings(1);
+    const levelFive = stockLevelSettings(5);
+    const easy = generateGauges("level-seed", levelOne.gaugeCount, levelOne);
+    const hard = generateGauges("level-seed", levelFive.gaugeCount, levelFive);
+    const arrivalSpread = (gauges: typeof easy) => {
+      const arrivals = gauges.map((gauge) => gaugeClickOutcome(gauge).timeToTargetMs);
+      return Math.max(...arrivals) - Math.min(...arrivals);
+    };
+    expect(hard.length).toBeGreaterThan(easy.length);
+    expect(normalizeAngle(hard[0].targetEndAngle - hard[0].targetStartAngle)).toBeLessThan(
+      normalizeAngle(easy[0].targetEndAngle - easy[0].targetStartAngle),
+    );
+    expect(Math.min(...hard.map((gauge) => Math.abs(gauge.angularVelocity)))).toBeGreaterThan(
+      Math.max(...easy.map((gauge) => Math.abs(gauge.angularVelocity))),
+    );
+    expect(hard.some((gauge) => gauge.angularVelocity < 0)).toBe(true);
+    expect(arrivalSpread(hard)).toBeLessThan(arrivalSpread(easy));
   });
 });

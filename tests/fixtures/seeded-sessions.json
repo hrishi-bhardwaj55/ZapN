@@ -1,14 +1,16 @@
 {
-  "configVersion": "zapn-public-guide-v2.0",
+  "configVersion": "zapn-public-guide-v3.0",
   "fixtures": [
     {
       "seed": "2026-08-16-qa-a",
       "difficulty": "easy",
+      "level": 1,
       "games": ["balloon", "skyscraper", "shapeshift", "code-compare", "pincode", "number-box", "figure-it-out", "switch", "stock-master"]
     },
     {
       "seed": "2026-08-16-qa-b",
       "difficulty": "hard",
+      "level": 5,
       "games": ["stock-master", "switch", "figure-it-out", "number-box", "pincode", "code-compare", "shapeshift", "skyscraper", "balloon"]
     }
   ]

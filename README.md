@@ -1,6 +1,6 @@
 # Cortex Practice Lab
 
-Cortex is an independent, browser-based cognitive assessment practice simulator aligned to the public [Quant Career Hub Zap-N guide](https://quantcareerhub.com/blog/optiver-zap-n-test-guide) and the non-proprietary practice references it links. It contains exactly nine playable games: Balloon, Skyscraper, Shapeshift, Code Compare, Digit, Number Box, Figure It Out, The Switch, and Stock Master.
+Cortex is an independent, desktop-first browser cognitive assessment practice simulator aligned to the public [Quant Career Hub Zap-N guide](https://quantcareerhub.com/blog/optiver-zap-n-test-guide) and the non-proprietary practice references it links. It contains exactly nine playable games: Balloon, Skyscraper, Shapeshift, Code Compare, Digit, Number Box, Figure It Out, The Switch, and Stock Master. Every game has five deterministic training levels, from Foundation to Extreme, which increase its core cognitive load rather than merely repeating more rounds.
 
 The product never presents a score as an Optiver score or pass cutoff. `Practice Score` is a configurable simulator heuristic; raw accuracy, reaction time, planning efficiency, memory span, information gain, and timing precision remain primary.
 

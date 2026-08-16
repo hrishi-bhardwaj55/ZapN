@@ -1,16 +1,23 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { buildResult, difficultyValue, standardDeviation } from "@/lib/engine";
+import { buildResult, standardDeviation } from "@/lib/engine";
 import type { GameProps, RoundRecord } from "@/lib/types";
 import { Feedback, GameShell, useGameTelemetry } from "../shared";
-import { generateCodeTrials } from "./engine";
+import { codeCompareLevelSettings, generateCodeTrials } from "./engine";
 
 export function CodeCompareGame(props: GameProps) {
-  const total = props.mode === "tutorial" ? 4 : props.config?.trials ?? difficultyValue(props.difficulty, { easy: 7, medium: 9, hard: 11 });
-  const length = difficultyValue(props.difficulty, { easy: 8, medium: 10, hard: 12 });
-  const responseWindow = props.config?.timeLimitMs || difficultyValue(props.difficulty, { easy: 2200, medium: 1500, hard: 1000 });
-  const trials = useMemo(() => generateCodeTrials(props.seed, total, length), [props.seed, total, length]);
+  const levelSettings = useMemo(
+    () => codeCompareLevelSettings(props.mode === "tutorial" ? 1 : props.level),
+    [props.level, props.mode],
+  );
+  const total = props.mode === "tutorial" ? 4 : props.config?.trials || [6, 8, 10, 12, 14][props.level - 1];
+  const length = levelSettings.codeLength;
+  const responseWindow = props.mode === "tutorial" ? 3000 : props.config?.timeLimitMs || levelSettings.responseWindowMs;
+  const trials = useMemo(
+    () => generateCodeTrials(props.seed, total, length, levelSettings.choiceCount, levelSettings.mutationKinds),
+    [length, levelSettings.choiceCount, levelSettings.mutationKinds, props.seed, total],
+  );
   const telemetry = useGameTelemetry(props.sessionId, "code-compare");
   const startedAt = useRef(new Date().toISOString());
   const shownAt = useRef(0);
@@ -31,12 +38,17 @@ export function CodeCompareGame(props: GameProps) {
           gameId: "code-compare",
           mode: props.mode,
           difficulty: props.difficulty,
+          level: props.level,
           seed: props.seed,
           startedAt: startedAt.current,
           rounds: records,
           telemetry: telemetry.events,
           metrics: {
+            level: props.level,
             codeLength: length,
+            choiceCount: levelSettings.choiceCount,
+            responseWindowMs: responseWindow,
+            mutationVariety: levelSettings.mutationKinds.length,
             timeouts: records.filter((record) => record.response === "timeout").length,
             consistencyMs: standardDeviation(records.map((record) => record.reactionTimeMs).filter(Boolean)),
             distractorErrors: records.filter((record) => !record.correct && record.response !== "timeout").length,
@@ -44,7 +56,7 @@ export function CodeCompareGame(props: GameProps) {
         }),
       );
     },
-    [length, props, telemetry, total],
+    [length, levelSettings.choiceCount, levelSettings.mutationKinds.length, props, responseWindow, telemetry, total],
   );
 
   const choose = useCallback(
@@ -97,11 +109,11 @@ export function CodeCompareGame(props: GameProps) {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       const value = Number(event.key);
-      if (value >= 1 && value <= 4) choose(value - 1);
+      if (value >= 1 && value <= levelSettings.choiceCount) choose(value - 1);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [choose]);
+  }, [choose, levelSettings.choiceCount]);
 
   const trial = trials[round];
   return (
@@ -115,7 +127,7 @@ export function CodeCompareGame(props: GameProps) {
         <div>
           <span className="aside-label">RULE</span>
           <strong>Exactly one match</strong>
-          <p>Compare every digit. Three near-matches differ by only one position.</p>
+          <p>Compare every digit. Near-matches may replace or transpose digits at higher levels.</p>
           {props.debug && props.mode !== "simulation" && <code>debug · answer {trial.answer + 1}</code>}
         </div>
       }

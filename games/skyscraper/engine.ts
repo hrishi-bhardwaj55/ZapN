@@ -1,4 +1,6 @@
 import { randomInt, seededRandom, shuffle } from "@/lib/engine";
+import { levelValue } from "@/lib/levels";
+import type { GameLevel } from "@/lib/types";
 
 export type BlockId = string;
 export type Stacks = BlockId[][];
@@ -21,6 +23,16 @@ export interface PuzzleOptions {
   capacity: number;
   scrambleMoves: number;
   minOptimalMoves?: number;
+}
+
+export function skyscraperOptionsForLevel(level: GameLevel): PuzzleOptions {
+  return levelValue(level, [
+    { stackCount: 3, pieceCount: 3, capacity: 3, scrambleMoves: 3, minOptimalMoves: 2 },
+    { stackCount: 3, pieceCount: 4, capacity: 3, scrambleMoves: 5, minOptimalMoves: 3 },
+    { stackCount: 4, pieceCount: 5, capacity: 3, scrambleMoves: 7, minOptimalMoves: 4 },
+    { stackCount: 4, pieceCount: 6, capacity: 3, scrambleMoves: 10, minOptimalMoves: 6 },
+    { stackCount: 4, pieceCount: 7, capacity: 3, scrambleMoves: 14, minOptimalMoves: 8 },
+  ] as const);
 }
 
 export const BLOCK_COLORS: Record<BlockId, string> = {

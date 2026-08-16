@@ -3,12 +3,13 @@ import type {
   EventType,
   GameEvent,
   GameId,
+  GameLevel,
   GameMode,
   GameResult,
   RoundRecord,
 } from "./types";
 
-export const CONFIG_VERSION = "zapn-public-guide-v2.0";
+export const CONFIG_VERSION = "zapn-public-guide-v3.0";
 
 export function hashSeed(seed: string): number {
   let hash = 2166136261;
@@ -114,6 +115,7 @@ export function buildResult(options: {
   gameId: GameId;
   mode: GameMode;
   difficulty: Difficulty;
+  level: GameLevel;
   seed: string;
   startedAt: string;
   rounds: RoundRecord[];
@@ -140,6 +142,7 @@ export function buildResult(options: {
     gameId: options.gameId,
     mode: options.mode,
     difficulty: options.difficulty,
+    level: options.level,
     seed: options.seed,
     configVersion: CONFIG_VERSION,
     startedAt: options.startedAt,

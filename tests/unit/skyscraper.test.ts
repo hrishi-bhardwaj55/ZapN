@@ -5,6 +5,7 @@ import {
   isLegalMove,
   matchesTarget,
   moveBlock,
+  skyscraperOptionsForLevel,
 } from "../../games/skyscraper/engine";
 
 describe("Skyscraper engine", () => {
@@ -33,5 +34,17 @@ describe("Skyscraper engine", () => {
     );
     expect(matchesTarget(solved, puzzle.target)).toBe(true);
     expect(bfsOptimalMoves(puzzle.initial, puzzle.target, puzzle.capacity)).toHaveLength(puzzle.optimalPath.length);
+  });
+
+  it("makes level 5 a larger puzzle with a deeper optimal solution than level 1", () => {
+    const foundationOptions = skyscraperOptionsForLevel(1);
+    const extremeOptions = skyscraperOptionsForLevel(5);
+    const foundation = generateSkyscraperPuzzle("level-depth", foundationOptions);
+    const extreme = generateSkyscraperPuzzle("level-depth", extremeOptions);
+
+    expect(extremeOptions.pieceCount).toBeGreaterThan(foundationOptions.pieceCount);
+    expect(extremeOptions.stackCount).toBeGreaterThan(foundationOptions.stackCount);
+    expect(extreme.optimalPath.length).toBeGreaterThan(foundation.optimalPath.length);
+    expect(extreme.optimalPath.length).toBeGreaterThanOrEqual(extremeOptions.minOptimalMoves ?? 0);
   });
 });

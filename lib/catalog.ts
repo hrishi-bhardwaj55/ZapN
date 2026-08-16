@@ -48,10 +48,10 @@ export const GAMES: GameMeta[] = [
     description: "Match a numeric reference code to the one identical option before its short window closes.",
     accent: "#00a78e",
     glyph: "CC",
-    controls: "Keys 1–4 or click a candidate.",
+    controls: "Keys 1–6 or click a candidate; unavailable numbers are ignored.",
     scoring: "Accuracy and reaction time by code length and mismatch position.",
     example: "Reference 731804 matches only the candidate with every digit in the same position.",
-    failure: "Choosing a one-digit distractor or missing the response window loses that opportunity.",
+    failure: "Choosing any near-match distractor or missing the response window loses that opportunity.",
   },
   {
     id: "pincode",

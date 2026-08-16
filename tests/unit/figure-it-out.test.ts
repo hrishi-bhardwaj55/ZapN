@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { allCandidates, figureFeedback, generateTarget, reduceCandidates } from "../../games/figure-it-out/engine";
+import { allCandidates, figureFeedback, figureLevelSettings, generateTarget, reduceCandidates } from "../../games/figure-it-out/engine";
 
 describe("Figure It Out engine", () => {
   it("computes exact attribute feedback", () => {
@@ -18,5 +18,14 @@ describe("Figure It Out engine", () => {
     const candidates = allCandidates();
     expect(candidates).toHaveLength(48);
     expect(new Set(candidates.map((candidate) => candidate.pattern))).toEqual(new Set(["solid", "striped", "outline"]));
+  });
+  it("makes level five a larger search under a tighter guess budget than level one", () => {
+    const levelOne = figureLevelSettings(1);
+    const levelFive = figureLevelSettings(5);
+    expect(allCandidates(1)).toHaveLength(12);
+    expect(allCandidates(5)).toHaveLength(80);
+    expect(allCandidates(5).length).toBeGreaterThan(allCandidates(1).length);
+    expect(levelFive.maxGuesses).toBeLessThan(levelOne.maxGuesses);
+    expect(generateTarget("level-seed", 5)).toEqual(generateTarget("level-seed", 5));
   });
 });

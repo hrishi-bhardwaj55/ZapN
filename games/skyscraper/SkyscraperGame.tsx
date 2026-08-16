@@ -11,15 +11,11 @@ import {
   isLegalMove,
   matchesTarget,
   moveBlock,
+  skyscraperOptionsForLevel,
   type Stacks,
 } from "./engine";
 
-const OPTIONS = {
-  tutorial: { stackCount: 3, pieceCount: 3, capacity: 3, scrambleMoves: 3, minOptimalMoves: 2 },
-  easy: { stackCount: 3, pieceCount: 4, capacity: 3, scrambleMoves: 5, minOptimalMoves: 3 },
-  medium: { stackCount: 4, pieceCount: 5, capacity: 3, scrambleMoves: 7, minOptimalMoves: 4 },
-  hard: { stackCount: 4, pieceCount: 6, capacity: 3, scrambleMoves: 10, minOptimalMoves: 6 },
-};
+const TUTORIAL_OPTIONS = { stackCount: 3, pieceCount: 3, capacity: 3, scrambleMoves: 3, minOptimalMoves: 2 };
 
 function Structure({ stacks, compact = false }: { stacks: Stacks; compact?: boolean }) {
   return (
@@ -61,7 +57,10 @@ function Structure({ stacks, compact = false }: { stacks: Stacks; compact?: bool
 }
 
 export function SkyscraperGame(props: GameProps) {
-  const options = props.mode === "tutorial" ? OPTIONS.tutorial : OPTIONS[props.difficulty];
+  const options = useMemo(
+    () => props.mode === "tutorial" ? TUTORIAL_OPTIONS : skyscraperOptionsForLevel(props.level),
+    [props.level, props.mode],
+  );
   const puzzle = useMemo(
     () => generateSkyscraperPuzzle(props.seed, options),
     [options, props.seed],
@@ -171,12 +170,16 @@ export function SkyscraperGame(props: GameProps) {
               gameId: "skyscraper",
               mode: props.mode,
               difficulty: props.difficulty,
+              level: props.level,
               seed: props.seed,
               startedAt: startedAt.current,
               rounds: nextRounds,
               telemetry: telemetry.events,
               score: Math.max(0, efficiency - invalid * 3),
               metrics: {
+                level: props.level,
+                pieceCount: options.pieceCount,
+                stackCount: options.stackCount,
                 actualMoves: nextMoves,
                 optimalMoves: puzzle.optimalPath.length,
                 extraMoves: nextMoves - puzzle.optimalPath.length,
@@ -192,7 +195,7 @@ export function SkyscraperGame(props: GameProps) {
         550,
       );
     },
-    [invalid, moves, props, puzzle, selected, stacks, telemetry],
+    [invalid, moves, options.pieceCount, options.stackCount, props, puzzle, selected, stacks, telemetry],
   );
 
   const debugMove = props.debug && props.mode !== "simulation"

@@ -55,11 +55,13 @@ test("Code Compare tutorial reaches results", async ({ page }) => {
 test("Digit tutorial flashes one digit at a time through all three phases", async ({ page }) => {
   await openTutorial(page, "Digit");
   for (let round = 0; round < 3; round += 1) {
-    await page.waitForTimeout(3900);
+    await page.locator(".digit-display").waitFor({ state: "visible" });
+    await page.locator(".recall-display").waitFor({ state: "visible", timeout: 10_000 });
     const emptySlots = await page.locator(".recall-display span").count();
     for (let digit = 0; digit < emptySlots; digit += 1) await page.getByRole("button", { name: "0", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Enter" })).toBeEnabled();
     await page.getByRole("button", { name: "Enter" }).click();
-    await page.waitForTimeout(1100);
+    if (round < 2) await page.locator(".digit-display").waitFor({ state: "visible", timeout: 5_000 });
   }
   await expect(page.getByText("ATTEMPT COMPLETE")).toBeVisible();
 });
@@ -109,4 +111,20 @@ test("history, custom session, simulation, and config routes are reachable", asy
   await expect(page.getByRole("heading", { name: /Nine games/ })).toBeVisible();
   await page.goto("/admin/game-config");
   await expect(page.getByRole("heading", { name: "Game configuration" })).toBeVisible();
+});
+
+test("level five is selectable and applies the extreme Code Compare profile", async ({ page }) => {
+  await page.goto("/?debug=true");
+  await page.waitForTimeout(900);
+  await page.getByRole("button", { name: "L5", exact: true }).click();
+  await expect(page.getByText("Extreme", { exact: false }).first()).toBeVisible();
+
+  const card = page.locator("article", { has: page.getByRole("heading", { name: "Code Compare" }) });
+  await card.getByRole("button", { name: "Practice" }).click();
+  await expect(page.locator(".level-picker", { hasText: "L5 · Extreme" }).last()).toBeVisible();
+  await page.getByRole("button", { name: "Start practice" }).click();
+
+  await expect(page.locator(".reference-code strong")).toHaveText(/^\d{14}$/);
+  await expect(page.locator(".code-choices button")).toHaveCount(6);
+  await expect(page.locator(".game-status-metrics")).toContainText("900 ms");
 });
