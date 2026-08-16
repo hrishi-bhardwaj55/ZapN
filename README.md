@@ -1,64 +1,115 @@
 # Cortex Practice Lab
 
-Cortex is an independent, desktop-first browser cognitive assessment practice simulator aligned to the public [Quant Career Hub Zap-N guide](https://quantcareerhub.com/blog/optiver-zap-n-test-guide) and the non-proprietary practice references it links. It contains exactly nine playable games: Balloon, Skyscraper, Shapeshift, Code Compare, Digit, Number Box, Figure It Out, The Switch, and Stock Master. Every game has five deterministic training levels, from Foundation to Extreme, which increase its core cognitive load rather than merely repeating more rounds.
+Cortex is a desktop-first web practice simulator for nine cognitive games described in the public [Quant Career Hub Zap-N guide](https://quantcareerhub.com/blog/optiver-zap-n-test-guide). It is an independent training project built from public task descriptions—not proprietary assessment software.
 
-The product never presents a score as an Optiver score or pass cutoff. `Practice Score` is a configurable simulator heuristic; raw accuracy, reaction time, planning efficiency, memory span, information gain, and timing precision remain primary.
+**Live website:** [cortex-practice-lab.hrishikesh-bhardwaj5.chatgpt.site](https://cortex-practice-lab.hrishikesh-bhardwaj5.chatgpt.site/)
 
-## Quick start with Docker
+## What is included
+
+- Balloon
+- Skyscraper
+- Shapeshift
+- Code Compare
+- Digit
+- Number Box
+- Figure It Out
+- The Switch
+- Stock Master
+
+Every game includes five deterministic training levels, from **L1 Foundation** to **L5 Extreme**. Higher levels increase the game’s core load—such as memory span, stimulus density, timing pressure, rule switching, or divided attention—instead of only adding more rounds.
+
+Other features include seeded replay, tutorials, timed and untimed practice, pause/resume, local attempt history, JSON/CSV export, a nine-game simulation route, and per-level results. `Practice Score` is a simulator heuristic, not an Optiver score, percentile, or pass cutoff.
+
+## Run locally
+
+### Node.js
+
+Requirements:
+
+- Node.js 22.13 or newer
+- npm
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/hrishi-bhardwaj55/ZapN.git
 cd ZapN
-docker compose up --build
-```
-
-Open `http://localhost:3000`. The optional FastAPI service is at `http://localhost:8000/docs` and PostgreSQL is exposed locally on port `5432`.
-
-## Local development
-
-Requires Node.js 22.13+.
-
-```bash
 npm install
 npm run dev
 ```
 
-To run the API separately:
+Open [http://localhost:3000](http://localhost:3000). The browser app works without the optional API; attempt history is stored in the current browser.
+
+### Docker
+
+With Docker Desktop running:
 
 ```bash
+git clone https://github.com/hrishi-bhardwaj55/ZapN.git
+cd ZapN
+docker compose up --build
+```
+
+Then open:
+
+- Web app: [http://localhost:3000](http://localhost:3000)
+- Optional API documentation: [http://localhost:8000/docs](http://localhost:8000/docs)
+- PostgreSQL: `localhost:5432`
+
+Stop the stack with `docker compose down`.
+
+## Optional API development
+
+The React web app is fully usable without the API. To run the FastAPI service separately on Windows PowerShell:
+
+```powershell
 cd backend
 python -m venv .venv
-.venv/Scripts/pip install -r requirements.txt
+.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
-Copy `.env.example` to `.env` when using the API. The browser product is local-first and requires no account; attempt history is stored on the current device. JSON and CSV exports are available from Performance.
+Copy `.env.example` to `.env` when using the API or Docker services that require environment configuration.
+
+## Useful routes
+
+- `/` — game library and individual practice
+- `/simulation` — full nine-game session
+- `/admin/game-config` — local developer configuration editor
+- `/?debug=true` — seeded diagnostic hints during local development
+
+Debug hints are never shown in production simulation mode.
 
 ## Quality checks
 
 ```bash
 npm run test:unit
-npm run build
+npm run test:e2e
+npm run lint
+npx tsc --noEmit
 npm test
 ```
 
-The unit suite covers seeded generation and core edge cases for all nine games. The application also exposes:
+The repository includes deterministic engine tests for every game and browser tests for tutorials, L1/L5 progression, clicks and keyboard input, pause guards, result persistence, console errors, and desktop layout at 1440×900 and 1024×768.
 
-- `/simulation` — full nine-game session entry
-- `/admin/game-config` — local developer configuration editor
-- `?debug=true` in development — reproducible hidden-state diagnostics; never shown in production simulation mode
+## Project structure
 
-## Architecture
+```text
+app/                 Application shell, routes, dashboard, and responsive UI
+games/<game>/        Independent React UI and deterministic engine per game
+lib/                 Catalog, levels, seeded RNG, scoring, telemetry, storage
+tests/unit/          Engine and edge-case tests for all nine games
+tests/e2e/           Full browser flows and per-game level QA
+backend/             Optional FastAPI/PostgreSQL persistence service
+docs/                Architecture, scoring, telemetry, and configuration
+```
 
-- `app/` — shell, routes, responsive design, history, dashboard, sessions
-- `games/<game>/` — independent UI and pure engine for every game
-- `lib/` — seeded RNG, analytics, results, telemetry, catalog, persistence
-- `tests/unit/` — deterministic engine tests for every game
-- `backend/` — optional FastAPI/PostgreSQL session and event persistence
-- `docs/` — architecture, scoring, telemetry, and configuration reference
+Further documentation:
 
-See [Architecture](docs/architecture.md), [Scoring](docs/scoring.md), [Telemetry](docs/telemetry.md), and [Game configuration](docs/game-configuration.md).
+- [Architecture](docs/architecture.md)
+- [Scoring](docs/scoring.md)
+- [Telemetry](docs/telemetry.md)
+- [Game configuration](docs/game-configuration.md)
 
-## Product boundaries
+## Product boundary
 
-This is practice software, not a reproduction of proprietary assessment software or undisclosed scoring. Cognitive labels and combined scores are simulator heuristics. Do not infer employer percentiles, selection outcomes, or pass thresholds from results.
+This project does not reproduce undisclosed test content, employer scoring, pass thresholds, or selection outcomes. Cognitive labels and combined scores are training heuristics based on public descriptions. Do not interpret results as employer percentiles or hiring predictions.
