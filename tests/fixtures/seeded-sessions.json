@@ -1,5 +1,5 @@
 {
-  "configVersion": "zapn-simulator-v1.0",
+  "configVersion": "zapn-public-guide-v2.0",
   "fixtures": [
     {
       "seed": "2026-08-16-qa-a",

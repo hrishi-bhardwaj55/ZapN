@@ -8,6 +8,15 @@ export interface NumberPuzzle {
   solution: string;
 }
 
+export type NumberOperator = "+" | "-" | "*" | "/";
+
+export interface WorkingValue {
+  id: string;
+  value: number;
+  expression: string;
+  sourceIndexes: number[];
+}
+
 function tokenize(expression: string): Token[] {
   const tokens: Token[] = [];
   let index = 0;
@@ -101,16 +110,86 @@ export function validateSolution(expression: string, puzzle: NumberPuzzle) {
   }
 }
 
-export function generateNumberPuzzles(seed: string, count: number, numberCount = 4): NumberPuzzle[] {
+export function applyOperation(left: number, operator: NumberOperator, right: number) {
+  if (operator === "/" && Math.abs(right) < 1e-10) throw new Error("Division by zero");
+  if (operator === "+") return left + right;
+  if (operator === "-") return left - right;
+  if (operator === "*") return left * right;
+  return left / right;
+}
+
+export function initialWorkingValues(numbers: number[]): WorkingValue[] {
+  return numbers.map((value, index) => ({ id: `number-${index}`, value, expression: String(value), sourceIndexes: [index] }));
+}
+
+export function combineWorkingValues(
+  values: WorkingValue[],
+  leftId: string,
+  operator: NumberOperator,
+  rightId: string,
+  resultId: string,
+) {
+  if (leftId === rightId) throw new Error("Choose two different values");
+  const leftIndex = values.findIndex((item) => item.id === leftId);
+  const rightIndex = values.findIndex((item) => item.id === rightId);
+  if (leftIndex < 0 || rightIndex < 0) throw new Error("That value is no longer available");
+  const left = values[leftIndex];
+  const right = values[rightIndex];
+  if (left.sourceIndexes.some((index) => right.sourceIndexes.includes(index))) throw new Error("A supplied number cannot be reused");
+  const result: WorkingValue = {
+    id: resultId,
+    value: applyOperation(left.value, operator, right.value),
+    expression: `(${left.expression}${operator}${right.expression})`,
+    sourceIndexes: [...left.sourceIndexes, ...right.sourceIndexes].sort((a, b) => a - b),
+  };
+  const insertAt = Math.min(leftIndex, rightIndex);
+  const next = values.filter((_, index) => index !== leftIndex && index !== rightIndex);
+  next.splice(insertAt, 0, result);
+  return next;
+}
+
+interface SolvableValue {
+  value: number;
+  expression: string;
+}
+
+export function solveTo24(numbers: number[]): string | null {
+  const search = (values: SolvableValue[]): string | null => {
+    if (values.length === 1) return Math.abs(values[0].value - 24) < 1e-8 ? values[0].expression : null;
+    for (let leftIndex = 0; leftIndex < values.length; leftIndex += 1) {
+      for (let rightIndex = leftIndex + 1; rightIndex < values.length; rightIndex += 1) {
+        const left = values[leftIndex];
+        const right = values[rightIndex];
+        const remaining = values.filter((_, index) => index !== leftIndex && index !== rightIndex);
+        const combinations: SolvableValue[] = [
+          { value: left.value + right.value, expression: `(${left.expression}+${right.expression})` },
+          { value: left.value * right.value, expression: `(${left.expression}*${right.expression})` },
+          { value: left.value - right.value, expression: `(${left.expression}-${right.expression})` },
+          { value: right.value - left.value, expression: `(${right.expression}-${left.expression})` },
+        ];
+        if (Math.abs(right.value) > 1e-10) combinations.push({ value: left.value / right.value, expression: `(${left.expression}/${right.expression})` });
+        if (Math.abs(left.value) > 1e-10) combinations.push({ value: right.value / left.value, expression: `(${right.expression}/${left.expression})` });
+        for (const combination of combinations) {
+          const solution = search([...remaining, combination]);
+          if (solution) return solution;
+        }
+      }
+    }
+    return null;
+  };
+  return search(numbers.map((value) => ({ value, expression: String(value) })));
+}
+
+export function generateNumberPuzzles(seed: string, count: number): NumberPuzzle[] {
   const random = seededRandom(`${seed}:number-box`);
-  return Array.from({ length: count }, () => {
-    const numbers = Array.from({ length: numberCount }, () => randomInt(random, 2, 9));
-    const [a, b, c, d = 0] = numbers;
-    const pattern = randomInt(random, 0, numberCount === 3 ? 1 : 2);
-    const solution =
-      numberCount === 3
-        ? pattern === 0 ? `(${a}+${b})*${c}` : `${a}*${b}+${c}`
-        : pattern === 0 ? `(${a}+${b})*${c}-${d}` : pattern === 1 ? `${a}*${b}+${c}+${d}` : `(${a}+${b})*(${c}-${d})`;
-    return { numbers, target: parseExpression(solution), solution };
-  });
+  const puzzles: NumberPuzzle[] = [];
+  let attempts = 0;
+  while (puzzles.length < count && attempts < Math.max(200, count * 100)) {
+    attempts += 1;
+    const numbers = Array.from({ length: 4 }, () => randomInt(random, 1, 9));
+    const solution = solveTo24(numbers);
+    if (solution) puzzles.push({ numbers, target: 24, solution });
+  }
+  while (puzzles.length < count) puzzles.push({ numbers: [1, 2, 3, 4], target: 24, solution: "1*2*3*4" });
+  return puzzles;
 }

@@ -4,50 +4,45 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { buildResult, difficultyValue } from "@/lib/engine";
 import type { GameProps, RoundRecord } from "@/lib/types";
 import { Feedback, GameShell, useGameTelemetry } from "../shared";
-import { generateDigits, nextAdaptiveSpan, transformDigits, type MemoryTask } from "./engine";
+import { generateDigits, nextAdaptiveSpan, taskForRound, transformDigits, type MemoryTask } from "./engine";
 
 export function PincodeGame(props: GameProps) {
-  const total = props.mode === "tutorial" ? 3 : props.config?.trials ?? difficultyValue(props.difficulty, { easy: 4, medium: 5, hard: 6 });
+  const total = Math.max(3, props.mode === "tutorial" ? 3 : props.config?.trials ?? difficultyValue(props.difficulty, { easy: 4, medium: 5, hard: 6 }));
   const initialSpan = difficultyValue(props.difficulty, { easy: 4, medium: 5, hard: 6 });
-  const displayMs = difficultyValue(props.difficulty, { easy: 2200, medium: 1750, hard: 1400 });
   const responseWindow = props.config?.timeLimitMs || difficultyValue(props.difficulty, { easy: 12000, medium: 10000, hard: 8000 });
   const telemetry = useGameTelemetry(props.sessionId, "pincode");
   const startedAt = useRef(new Date().toISOString());
-  const recallShownAt = useRef(performance.now());
+  const recallShownAt = useRef(0);
   const roundsRef = useRef<RoundRecord[]>([]);
+  const locked = useRef(false);
   const finished = useRef(false);
   const [round, setRound] = useState(0);
-  const [span, setSpan] = useState(initialSpan);
-  const [streak, setStreak] = useState(0);
+  const [spans, setSpans] = useState<Record<MemoryTask, number>>({
+    forward: initialSpan,
+    reverse: initialSpan,
+    sort: initialSpan,
+  });
   const [phase, setPhase] = useState<"show" | "recall" | "feedback">("show");
   const [input, setInput] = useState("");
   const [feedback, setFeedback] = useState<{ tone: "good" | "bad"; text: string } | null>(null);
   const [visibleIndex, setVisibleIndex] = useState(0);
 
-  const task: MemoryTask = useMemo(() => {
-    if (props.difficulty === "easy") return "forward";
-    const tasks: MemoryTask[] = props.difficulty === "hard" ? ["forward", "reverse", "sort"] : ["forward", "reverse"];
-    return tasks[round % tasks.length];
-  }, [props.difficulty, round]);
+  const task = taskForRound(round, total);
+  const span = spans[task];
   const digits = useMemo(() => generateDigits(props.seed, round, span), [props.seed, round, span]);
   const expected = transformDigits(digits, task).join("");
-  const presentationMode = props.config?.presentationMode ?? "mixed";
-  const sequential = presentationMode === "sequential" || (presentationMode === "mixed" && props.difficulty === "hard" && round % 2 === 1);
 
   useEffect(() => {
     if (props.paused || phase !== "show") return;
     telemetry.record("STIMULUS_SHOWN", round, { digits, task, span });
     const interDigitDelay = props.config?.interDigitDelayMs ?? 650;
-    const timers: number[] = [];
-    if (sequential) {
-      digits.forEach((_, index) => timers.push(window.setTimeout(() => setVisibleIndex(index), index * interDigitDelay)));
-    }
+    const timers = digits.map((_, index) => window.setTimeout(() => setVisibleIndex(index), index * interDigitDelay));
     const timeout = window.setTimeout(() => {
       setPhase("recall");
       recallShownAt.current = performance.now();
-    }, sequential ? digits.length * interDigitDelay + 500 : props.mode === "tutorial" ? displayMs + 600 : displayMs);
+    }, digits.length * interDigitDelay + 350);
     return () => { window.clearTimeout(timeout); timers.forEach((timer) => window.clearTimeout(timer)); };
-  }, [digits, displayMs, phase, props.config?.interDigitDelayMs, props.mode, props.paused, round, sequential, span, task, telemetry]);
+  }, [digits, phase, props.config?.interDigitDelayMs, props.paused, round, span, task, telemetry]);
 
   useEffect(() => {
     if (!props.paused && phase === "recall") recallShownAt.current = performance.now();
@@ -58,9 +53,14 @@ export function PincodeGame(props: GameProps) {
       if (finished.current) return;
       finished.current = true;
       const correctSpans = records.filter((record) => record.correct).map((record) => Number(record.stimulus.split(":")[1]));
+      const recordsFor = (modeName: MemoryTask) => records.filter((record) => record.stimulus.startsWith(`${modeName}:`));
       const maxSpanFor = (modeName: MemoryTask) => {
         const spans = records.filter((record) => record.correct && record.stimulus.startsWith(`${modeName}:`)).map((record) => Number(record.stimulus.split(":")[1]));
         return spans.length ? Math.max(...spans) : 0;
+      };
+      const accuracyFor = (modeName: MemoryTask) => {
+        const modeRecords = recordsFor(modeName);
+        return modeRecords.length ? (modeRecords.filter((record) => record.correct).length / modeRecords.length) * 100 : 0;
       };
       const errorStats = records.filter((record) => !record.correct).reduce(
         (stats, record) => {
@@ -95,24 +95,29 @@ export function PincodeGame(props: GameProps) {
             forwardMaxSpan: maxSpanFor("forward"),
             reverseMaxSpan: maxSpanFor("reverse"),
             sortedMaxSpan: maxSpanFor("sort"),
-            finalSpan: span,
+            repeatAccuracy: accuracyFor("forward"),
+            reverseAccuracy: accuracyFor("reverse"),
+            sortAccuracy: accuracyFor("sort"),
+            repeatAttempts: recordsFor("forward").length,
+            reverseAttempts: recordsFor("reverse").length,
+            sortAttempts: recordsFor("sort").length,
+            finalRepeatSpan: spans.forward,
+            finalReverseSpan: spans.reverse,
+            finalSortSpan: spans.sort,
             orderErrors: errorStats.order,
             missingDigits: errorStats.missing,
             extraDigits: errorStats.extra,
             duplicateErrors: errorStats.duplicate,
-            reverseAccuracy: records.filter((record) => record.stimulus.startsWith("reverse")).length
-              ? (records.filter((record) => record.stimulus.startsWith("reverse") && record.correct).length /
-                  records.filter((record) => record.stimulus.startsWith("reverse")).length) * 100
-              : 0,
           },
         }),
       );
     },
-    [props, span, telemetry, total],
+    [props, spans, telemetry, total],
   );
 
   const submit = useCallback((timedOut = false) => {
-    if (props.paused || phase !== "recall" || finished.current || (!input && !timedOut)) return;
+    if (props.paused || phase !== "recall" || locked.current || finished.current || (!input && !timedOut)) return;
+    locked.current = true;
     const response = timedOut ? "timeout" : input;
     const correct = !timedOut && input === expected;
     const reactionTimeMs = timedOut ? responseWindow : performance.now() - recallShownAt.current;
@@ -130,20 +135,21 @@ export function PincodeGame(props: GameProps) {
     telemetry.record(correct ? "CORRECT_RESPONSE" : "INCORRECT_RESPONSE", round, { expected });
     setFeedback({ tone: correct ? "good" : "bad", text: correct ? `${span}-digit recall correct` : `Correct sequence: ${expected}` });
     setPhase("feedback");
-    const adaptive = props.config?.adaptive === false ? { span, streak: correct ? streak + 1 : 0 } : nextAdaptiveSpan(span, streak, correct);
+    const nextSpan = props.config?.adaptive === false ? span : nextAdaptiveSpan(span, correct);
     window.setTimeout(() => {
       if (round + 1 >= total) complete(records);
       else {
         setRound((value) => value + 1);
-        setSpan(adaptive.span);
-        setStreak(adaptive.streak);
+        setSpans((current) => ({ ...current, [task]: nextSpan }));
         setInput("");
         setFeedback(null);
+        setVisibleIndex(0);
         setPhase("show");
-        telemetry.record("LEVEL_CHANGED", round + 1, { span: adaptive.span });
+        locked.current = false;
+        telemetry.record("LEVEL_CHANGED", round + 1, { task, span: nextSpan });
       }
     }, props.mode === "tutorial" ? 1000 : 650);
-  }, [complete, digits, expected, input, phase, props.mode, props.paused, responseWindow, round, span, streak, task, telemetry, total]);
+  }, [complete, digits, expected, input, phase, props.config?.adaptive, props.mode, props.paused, responseWindow, round, span, task, telemetry, total]);
 
   useEffect(() => {
     if (props.paused || !props.timed || props.mode === "tutorial" || phase !== "recall") return;
@@ -154,35 +160,45 @@ export function PincodeGame(props: GameProps) {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (props.paused || phase !== "recall") return;
-      if (/^\d$/.test(event.key) && input.length < span) setInput((value) => value + event.key);
-      if (event.key === "Backspace") setInput((value) => value.slice(0, -1));
-      if (event.key === "Enter") submit(false);
+      if (/^\d$/.test(event.key) && input.length < span) {
+        event.preventDefault();
+        setInput((value) => value + event.key);
+      }
+      if (event.key === "Backspace") {
+        event.preventDefault();
+        setInput((value) => value.slice(0, -1));
+      }
+      if (event.key === "Enter") {
+        event.preventDefault();
+        submit(false);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [input.length, phase, props.paused, span, submit]);
 
+  const taskName = task === "forward" ? "REPEAT" : task === "reverse" ? "REVERSE" : "SORT";
   const taskLabel = task === "forward" ? "Recall in the same order" : task === "reverse" ? "Recall in reverse order" : "Recall from lowest to highest";
   return (
     <GameShell
-      title="Pincode"
+      title="Digit"
       eyebrow="Working memory"
       round={round}
       total={total}
       score={`Span ${span}`}
       aside={<div><span className="aside-label">TRANSFORMATION</span><strong>{taskLabel}</strong><p>The sequence disappears before entry begins.</p></div>}
     >
-      <div className="memory-task-label">{task.toUpperCase()}</div>
+      <div className="memory-task-label">{taskName}</div>
       {phase === "show" ? (
-        <div className={`digit-display ${sequential ? "sequential" : ""}`} aria-label={`Memorize ${digits.join(" ")}`}>
-          {(sequential ? [digits[visibleIndex]] : digits).map((digit, index) => <span key={`${digit}-${sequential ? visibleIndex : index}`}>{digit}</span>)}
+        <div className="digit-display sequential" role="status" aria-live="polite" aria-label={`Digit ${visibleIndex + 1} of ${span}: ${digits[visibleIndex]}`}>
+          <span key={`${digits[visibleIndex]}-${visibleIndex}`}>{digits[visibleIndex]}</span>
         </div>
       ) : (
         <div className="recall-display" aria-label="Your recalled sequence">
           {Array.from({ length: span }, (_, index) => <span key={index}>{input[index] ?? "·"}</span>)}
         </div>
       )}
-      <p className="prompt-line">{phase === "show" ? "Memorize the sequence" : taskLabel}</p>
+      <p className="prompt-line">{phase === "show" ? `Memorize · digit ${visibleIndex + 1} of ${span}` : taskLabel}</p>
       <div className="number-pad compact">
         {Array.from({ length: 10 }, (_, digit) => (
           <button key={digit} disabled={props.paused || phase !== "recall" || input.length >= span} onClick={() => setInput((value) => `${value}${digit}`)}>{digit}</button>

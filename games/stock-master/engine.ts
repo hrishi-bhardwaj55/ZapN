@@ -46,6 +46,17 @@ export function gaugeClickOutcome(gauge: GaugeState) {
   } as const;
 }
 
+export function targetPassState(gauge: GaugeState, wasInside: boolean) {
+  const inside = targetContains(gauge.angle, gauge.targetStartAngle, gauge.targetEndAngle);
+  return { inside, missed: wasInside && !inside };
+}
+
+export function escalatedVelocity(angularVelocity: number, step: number) {
+  const direction = Math.sign(angularVelocity) || 1;
+  const increase = 1.5 + Math.min(20, Math.max(0, step)) * 0.35;
+  return direction * Math.min(96, Math.abs(angularVelocity) + increase);
+}
+
 export function generateGauges(seed: string, count: number, hard = false): GaugeState[] {
   const random = seededRandom(`${seed}:stock-master`);
   return Array.from({ length: count }, (_, index) => {
@@ -65,5 +76,10 @@ export function rescheduleGauge(gauge: GaugeState, step: number): GaugeState {
   const width = normalizeAngle(gauge.targetEndAngle - gauge.targetStartAngle);
   const direction = Math.sign(gauge.angularVelocity);
   const start = normalizeAngle(gauge.angle + direction * (95 + (step * 37) % 135));
-  return { ...gauge, targetStartAngle: start, targetEndAngle: normalizeAngle(start + width) };
+  return {
+    ...gauge,
+    angularVelocity: escalatedVelocity(gauge.angularVelocity, step),
+    targetStartAngle: start,
+    targetEndAngle: normalizeAngle(start + width),
+  };
 }

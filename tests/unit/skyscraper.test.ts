@@ -1,16 +1,37 @@
 import { describe, expect, it } from "vitest";
-import { bfsOptimalMoves, createTowers, isLegalMove, isSolved, moveDisk } from "../../games/skyscraper/engine";
+import {
+  bfsOptimalMoves,
+  generateSkyscraperPuzzle,
+  isLegalMove,
+  matchesTarget,
+  moveBlock,
+} from "../../games/skyscraper/engine";
 
 describe("Skyscraper engine", () => {
-  it("rejects a larger floor on a smaller floor", () => {
-    const towers = moveDisk(createTowers(3), 0, 1)!;
-    expect(isLegalMove(towers, 0, 1)).toBe(false);
-    expect(moveDisk(towers, 0, 1)).toBeNull();
+  it("moves only the top block and has no size-order rule", () => {
+    const stacks = [["blue", "coral"], ["amber"], []];
+    expect(isLegalMove(stacks, 0, 1, 3)).toBe(true);
+    expect(moveBlock(stacks, 0, 1, 3)).toEqual([["blue"], ["amber", "coral"], []]);
+    expect(stacks).toEqual([["blue", "coral"], ["amber"], []]);
   });
-  it("finds the optimal BFS solution and solves the board", () => {
-    const path = bfsOptimalMoves(4);
-    expect(path).toHaveLength(15);
-    const solved = path.reduce((towers, [from, to]) => moveDisk(towers, from, to)!, createTowers(4));
-    expect(isSolved(solved, 4)).toBe(true);
+
+  it("rejects empty sources and full destinations without changing state", () => {
+    const stacks = [[], ["coral", "blue"], ["amber"]];
+    expect(isLegalMove(stacks, 0, 2, 2)).toBe(false);
+    expect(isLegalMove(stacks, 2, 1, 2)).toBe(false);
+    expect(moveBlock(stacks, 2, 1, 2)).toBe(stacks);
+  });
+
+  it("generates a deterministic, solvable puzzle with an exact target", () => {
+    const options = { stackCount: 4, pieceCount: 5, capacity: 3, scrambleMoves: 7, minOptimalMoves: 4 };
+    const puzzle = generateSkyscraperPuzzle("stack-seed", options);
+    expect(puzzle).toEqual(generateSkyscraperPuzzle("stack-seed", options));
+    expect(puzzle.optimalPath.length).toBeGreaterThanOrEqual(4);
+    const solved = puzzle.optimalPath.reduce(
+      (stacks, move) => moveBlock(stacks, move.from, move.to, puzzle.capacity),
+      puzzle.initial,
+    );
+    expect(matchesTarget(solved, puzzle.target)).toBe(true);
+    expect(bfsOptimalMoves(puzzle.initial, puzzle.target, puzzle.capacity)).toHaveLength(puzzle.optimalPath.length);
   });
 });

@@ -4,36 +4,43 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { buildResult, difficultyValue, standardDeviation } from "@/lib/engine";
 import type { GameProps, RoundRecord } from "@/lib/types";
 import { Feedback, GameShell, useGameTelemetry } from "../shared";
-import { createMapping, generateShapeTrials, isAnticipatory, SHAPES, type Direction } from "./engine";
+import {
+  calculateSimonMetrics,
+  generateShapeTrials,
+  isAnticipatory,
+  isCorrectShapeResponse,
+  SHAPES,
+  SHAPE_MAPPING,
+  type ShapeDirection,
+} from "./engine";
 
-const symbols = { triangle: "△", circle: "○", square: "□", diamond: "◇" };
-const arrows: Record<Direction, string> = {
-  ArrowLeft: "←",
-  ArrowUp: "↑",
-  ArrowRight: "→",
-  ArrowDown: "↓",
-};
+const symbols = { circle: "○", square: "□" } as const;
+const arrows: Record<ShapeDirection, string> = { ArrowLeft: "←", ArrowRight: "→" };
 
 export function ShapeshiftGame(props: GameProps) {
-  const total = props.mode === "tutorial" ? 5 : props.config?.trials ?? difficultyValue(props.difficulty, { easy: 8, medium: 10, hard: 12 });
-  const responseWindow = props.config?.timeLimitMs || difficultyValue(props.difficulty, { easy: 2200, medium: 1600, hard: 1150 });
-  const mapping = useMemo(() => createMapping(props.seed), [props.seed]);
+  const total = props.mode === "tutorial" ? 4 : props.config?.trials ?? difficultyValue(props.difficulty, { easy: 8, medium: 10, hard: 12 });
+  const responseWindow = props.config?.timeLimitMs || difficultyValue(props.difficulty, { easy: 1800, medium: 1400, hard: 1100 });
   const trials = useMemo(() => generateShapeTrials(props.seed, total), [props.seed, total]);
   const telemetry = useGameTelemetry(props.sessionId, "shapeshift");
   const startedAt = useRef(new Date().toISOString());
-  const shownAt = useRef(performance.now());
+  const shownAt = useRef(0);
+  const pausedAt = useRef<number | null>(null);
   const roundsRef = useRef<RoundRecord[]>([]);
   const locked = useRef(false);
   const finished = useRef(false);
   const [round, setRound] = useState(0);
+  const [stimulusVisible, setStimulusVisible] = useState(false);
   const [feedback, setFeedback] = useState<{ tone: "good" | "bad"; text: string } | null>(null);
 
   const complete = useCallback(
     (records: RoundRecord[]) => {
       if (finished.current) return;
       finished.current = true;
-      const anticipations = records.filter((record) => isAnticipatory(record.reactionTimeMs)).length;
-      telemetry.record("GAME_COMPLETED", total);
+      const simon = calculateSimonMetrics(records);
+      const validReactionTimes = records
+        .filter((record) => record.response !== "timeout" && !isAnticipatory(record.reactionTimeMs))
+        .map((record) => record.reactionTimeMs);
+      telemetry.record("GAME_COMPLETED", total, simon);
       props.onFinish(
         buildResult({
           sessionId: props.sessionId,
@@ -45,9 +52,12 @@ export function ShapeshiftGame(props: GameProps) {
           rounds: records,
           telemetry: telemetry.events,
           metrics: {
-            anticipations,
+            ...simon,
+            anticipations: records.filter(
+              (record) => record.response !== "timeout" && isAnticipatory(record.reactionTimeMs),
+            ).length,
             timeouts: records.filter((record) => record.response === "timeout").length,
-            consistencyMs: standardDeviation(records.map((record) => record.reactionTimeMs).filter(Boolean)),
+            consistencyMs: standardDeviation(validReactionTimes),
           },
         }),
       );
@@ -56,28 +66,45 @@ export function ShapeshiftGame(props: GameProps) {
   );
 
   const submit = useCallback(
-    (direction: Direction | "timeout") => {
+    (direction: ShapeDirection | "timeout") => {
       if (props.paused || locked.current || finished.current) return;
       locked.current = true;
-      const reactionTimeMs = performance.now() - shownAt.current;
-      const correctDirection = mapping[trials[round]];
-      const correct = direction === correctDirection && !isAnticipatory(reactionTimeMs);
+      const trial = trials[round];
+      const reactionTimeMs = stimulusVisible ? performance.now() - shownAt.current : 0;
+      const correct =
+        direction !== "timeout" && stimulusVisible && isCorrectShapeResponse(trial, direction, reactionTimeMs);
+      const response = direction === "timeout" ? "timeout" : direction;
       const record: RoundRecord = {
         round: round + 1,
-        stimulus: trials[round],
-        response: direction,
+        stimulus: `${trial.congruent ? "congruent" : "incongruent"}:${trial.shape}:${trial.position}`,
+        response,
         correct,
         reactionTimeMs: direction === "timeout" ? responseWindow : reactionTimeMs,
         score: correct ? 1 : 0,
       };
       const records = [...roundsRef.current, record];
       roundsRef.current = records;
-      telemetry.record(direction === "timeout" ? "TIMEOUT" : "USER_RESPONSE", round, { direction, reactionTimeMs });
-      telemetry.record(correct ? "CORRECT_RESPONSE" : "INCORRECT_RESPONSE", round, { expected: correctDirection });
+      const anticipatory = direction !== "timeout" && (!stimulusVisible || isAnticipatory(reactionTimeMs));
+      telemetry.record(direction === "timeout" ? "TIMEOUT" : "USER_RESPONSE", round, {
+        direction,
+        reactionTimeMs,
+        anticipatory,
+      });
+      telemetry.record(correct ? "CORRECT_RESPONSE" : "INCORRECT_RESPONSE", round, {
+        expected: trial.correctDirection,
+        congruent: trial.congruent,
+      });
       setFeedback({
         tone: correct ? "good" : "bad",
-        text: correct ? `${Math.round(reactionTimeMs)} ms · correct` : `Expected ${arrows[correctDirection]}`,
+        text: correct
+          ? `${Math.round(reactionTimeMs)} ms · correct`
+          : anticipatory
+            ? "Too early — wait for the shape."
+            : direction === "timeout"
+              ? `Timed out · expected ${arrows[trial.correctDirection]}`
+              : `Expected ${arrows[trial.correctDirection]}`,
       });
+      setStimulusVisible(false);
       window.setTimeout(() => {
         if (round + 1 >= total) {
           complete(records);
@@ -85,62 +112,104 @@ export function ShapeshiftGame(props: GameProps) {
           setRound((value) => value + 1);
           setFeedback(null);
           locked.current = false;
-          shownAt.current = performance.now();
-          telemetry.record("STIMULUS_SHOWN", round + 1, { shape: trials[round + 1] });
         }
-      }, props.mode === "tutorial" ? 650 : 280);
+      }, props.mode === "tutorial" ? 650 : 300);
     },
-    [complete, mapping, props.mode, props.paused, responseWindow, round, telemetry, total, trials],
+    [complete, props.mode, props.paused, responseWindow, round, stimulusVisible, telemetry, total, trials],
   );
 
   useEffect(() => {
-    shownAt.current = performance.now();
-    telemetry.record("STIMULUS_SHOWN", round, { shape: trials[round] });
-    if (props.paused || !props.timed || props.mode === "tutorial") return;
+    if (props.paused || feedback || stimulusVisible || finished.current) return;
+    const trial = trials[round];
+    const timeout = window.setTimeout(() => {
+      shownAt.current = performance.now();
+      setStimulusVisible(true);
+      telemetry.record("STIMULUS_SHOWN", round, {
+        shape: trial.shape,
+        position: trial.position,
+        congruent: trial.congruent,
+      });
+    }, 300 + trial.preStimulusMs);
+    return () => window.clearTimeout(timeout);
+  }, [feedback, props.paused, round, stimulusVisible, telemetry, trials]);
+
+  useEffect(() => {
+    if (!stimulusVisible || props.paused || !props.timed || props.mode === "tutorial") return;
     const timeout = window.setTimeout(() => submit("timeout"), responseWindow);
     return () => window.clearTimeout(timeout);
-  }, [props.mode, props.paused, props.timed, responseWindow, round, submit, telemetry, trials]);
+  }, [props.mode, props.paused, props.timed, responseWindow, stimulusVisible, submit]);
+
+  useEffect(() => {
+    if (props.paused) {
+      if (pausedAt.current === null) pausedAt.current = performance.now();
+    } else if (pausedAt.current !== null) {
+      if (stimulusVisible) shownAt.current += performance.now() - pausedAt.current;
+      pausedAt.current = null;
+    }
+  }, [props.paused, stimulusVisible]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (["ArrowLeft", "ArrowUp", "ArrowRight", "ArrowDown"].includes(event.key)) {
+      const direction = event.key === "f" || event.key === "F" || event.key === "ArrowLeft"
+        ? "ArrowLeft"
+        : event.key === "j" || event.key === "J" || event.key === "ArrowRight"
+          ? "ArrowRight"
+          : null;
+      if (direction) {
         event.preventDefault();
-        submit(event.key as Direction);
+        submit(direction);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [submit]);
 
+  const trial = trials[round];
+
   return (
     <GameShell
       title="Shapeshift"
-      eyebrow="Rule mapping"
+      eyebrow="Simon interference"
       round={round}
       total={total}
       aside={
         <div>
-          <span className="aside-label">ACTIVE MAP</span>
+          <span className="aside-label">FIXED IDENTITY MAP</span>
           <div className="shape-map">
             {SHAPES.map((shape) => (
-              <span key={shape}><b>{symbols[shape]}</b><em>{arrows[mapping[shape]]}</em></span>
+              <span key={shape}><b>{symbols[shape]}</b><em>{arrows[SHAPE_MAPPING[shape]]}</em></span>
             ))}
           </div>
-          <p>Respond to the shape using the mapped direction.</p>
+          <p>F or ← for circle. J or → for square. Ignore where the shape appears.</p>
         </div>
       }
     >
-      <div className={`shape-stimulus ${trials[round]}`} aria-label={trials[round]}>
-        {symbols[trials[round]]}
-      </div>
-      <p className="prompt-line">Which direction does this shape map to?</p>
-      {feedback && <Feedback tone={feedback.tone}>{feedback.text}</Feedback>}
-      <div className="direction-pad" aria-label="Direction controls">
-        {(["ArrowLeft", "ArrowUp", "ArrowRight", "ArrowDown"] as Direction[]).map((direction) => (
-          <button key={direction} onClick={() => submit(direction)} aria-label={direction.replace("Arrow", "")}>
-            {arrows[direction]}
-          </button>
+      <div
+        style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", minHeight: 220, alignItems: "center" }}
+        aria-live="polite"
+      >
+        {(["left", "right"] as const).map((position) => (
+          <div key={position} style={{ display: "grid", placeItems: "center", minWidth: 0 }}>
+            {stimulusVisible && trial.position === position && (
+              <div className={`shape-stimulus ${trial.shape}`} aria-label={`${trial.shape} on ${position}`}>
+                {symbols[trial.shape]}
+              </div>
+            )}
+          </div>
         ))}
+        {!stimulusVisible && !feedback && (
+          <span style={{ gridColumn: "1 / -1", gridRow: 1, justifySelf: "center", fontSize: "2rem" }}>+</span>
+        )}
+      </div>
+      <p className="prompt-line">Identify the shape. Its position is irrelevant.</p>
+      {feedback && <Feedback tone={feedback.tone}>{feedback.text}</Feedback>}
+      <div className="direction-pad" style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }} aria-label="Shape controls">
+        <button type="button" onClick={() => submit("ArrowLeft")} disabled={props.paused || Boolean(feedback)} aria-label="Circle, left">
+          ← <small>F · CIRCLE</small>
+        </button>
+        <button type="button" onClick={() => submit("ArrowRight")} disabled={props.paused || Boolean(feedback)} aria-label="Square, right">
+          → <small>J · SQUARE</small>
+        </button>
       </div>
     </GameShell>
   );

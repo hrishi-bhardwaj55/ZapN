@@ -4,21 +4,27 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { buildResult, difficultyValue, mean } from "@/lib/engine";
 import type { GameProps, RoundRecord } from "@/lib/types";
 import { Feedback, GameShell, useGameTelemetry } from "../shared";
-import { gaugeClickOutcome, generateGauges, normalizeAngle, rescheduleGauge, type GaugeState } from "./engine";
+import { escalatedVelocity, gaugeClickOutcome, generateGauges, normalizeAngle, rescheduleGauge, targetContains, targetPassState, type GaugeState } from "./engine";
 
 export function StockMasterGame(props: GameProps) {
   const gaugeCount = props.mode === "tutorial" ? 4 : difficultyValue(props.difficulty, { easy: 4, medium: 4, hard: 6 });
   const total = props.mode === "tutorial" ? 6 : props.config?.trials ?? difficultyValue(props.difficulty, { easy: 9, medium: 11, hard: 13 });
   const initialGauges = useMemo(() => generateGauges(props.seed, gaugeCount, props.difficulty === "hard"), [gaugeCount, props.difficulty, props.seed]);
   const gaugesRef = useRef<GaugeState[]>(initialGauges);
+  const targetSeenRef = useRef(initialGauges.map((gauge) => targetContains(gauge.angle, gauge.targetStartAngle, gauge.targetEndAngle)));
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const lastFrame = useRef(performance.now());
+  const lastFrame = useRef(0);
   const startedAt = useRef(new Date().toISOString());
   const roundsRef = useRef<RoundRecord[]>([]);
   const finished = useRef(false);
   const telemetry = useGameTelemetry(props.sessionId, "stock-master");
+  const attemptsRef = useRef(0);
+  const hitsRef = useRef(0);
+  const streakRef = useRef(0);
+  const bestStreakRef = useRef(0);
   const [attempts, setAttempts] = useState(0);
   const [hits, setHits] = useState(0);
+  const [streak, setStreak] = useState(0);
   const [feedback, setFeedback] = useState<{ tone: "good" | "bad"; text: string }>({ tone: "good", text: "Track every gauge. Activate a needle inside its target arc." });
 
   const draw = useCallback((context: CanvasRenderingContext2D, width: number, height: number) => {
@@ -69,64 +75,48 @@ export function StockMasterGame(props: GameProps) {
     });
   }, [gaugeCount]);
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    let frame = 0;
-    const render = (timestamp: number) => {
-      const bounds = canvas.getBoundingClientRect();
-      const ratio = Math.min(2, window.devicePixelRatio || 1);
-      const pixelWidth = Math.max(1, Math.floor(bounds.width * ratio));
-      const pixelHeight = Math.max(1, Math.floor(bounds.height * ratio));
-      if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
-        canvas.width = pixelWidth;
-        canvas.height = pixelHeight;
-      }
-      const deltaSeconds = Math.min(0.05, (timestamp - lastFrame.current) / 1000);
-      lastFrame.current = timestamp;
-      if (!props.paused) {
-        gaugesRef.current.forEach((gauge) => {
-          gauge.angle = normalizeAngle(gauge.angle + gauge.angularVelocity * deltaSeconds);
-        });
-      }
-      const context = canvas.getContext("2d");
-      if (context) {
-        context.setTransform(ratio, 0, 0, ratio, 0, 0);
-        draw(context, bounds.width, bounds.height);
-      }
-      frame = requestAnimationFrame(render);
-    };
-    frame = requestAnimationFrame(render);
-    return () => cancelAnimationFrame(frame);
-  }, [draw, props.paused]);
-
-  const activate = useCallback(
-    (index: number) => {
+  const completeAttempt = useCallback(
+    (index: number, missedPass = false) => {
       if (props.paused || finished.current || !gaugesRef.current[index]) return;
       const gauge = gaugesRef.current[index];
       const outcome = gaugeClickOutcome(gauge);
-      const correct = outcome.classification === "HIT";
-      const nextAttempts = attempts + 1;
-      const nextHits = hits + Number(correct);
+      const classification = missedPass ? "MISSED_PASS" : outcome.classification;
+      const correct = classification === "HIT";
+      const nextAttempts = attemptsRef.current + 1;
+      const nextHits = hitsRef.current + Number(correct);
+      const nextStreak = correct ? streakRef.current + 1 : 0;
+      attemptsRef.current = nextAttempts;
+      hitsRef.current = nextHits;
+      streakRef.current = nextStreak;
+      bestStreakRef.current = Math.max(bestStreakRef.current, nextStreak);
       const record: RoundRecord = {
         round: nextAttempts,
         stimulus: `gauge:${index + 1}:target:${Math.round(gauge.targetStartAngle)}-${Math.round(gauge.targetEndAngle)}`,
-        response: `${outcome.classification}:${Math.round(gauge.angle)}:${outcome.angularError.toFixed(2)}:${outcome.timeToTargetMs.toFixed(1)}`,
+        response: `${classification}:${Math.round(gauge.angle)}:${outcome.angularError.toFixed(2)}:${outcome.timeToTargetMs.toFixed(1)}`,
         correct,
         reactionTimeMs: Math.abs(outcome.timeToTargetMs),
         score: outcome.precision,
       };
       const records = [...roundsRef.current, record];
       roundsRef.current = records;
-      telemetry.record("USER_RESPONSE", nextAttempts, { gauge: index + 1, ...outcome, angle: gauge.angle });
-      telemetry.record(correct ? "CORRECT_RESPONSE" : "INCORRECT_RESPONSE", nextAttempts, { classification: outcome.classification });
+      telemetry.record("USER_RESPONSE", nextAttempts, { gauge: index + 1, ...outcome, classification, angle: gauge.angle });
+      telemetry.record(correct ? "CORRECT_RESPONSE" : "INCORRECT_RESPONSE", nextAttempts, { classification });
       setAttempts(nextAttempts);
       setHits(nextHits);
+      setStreak(nextStreak);
       setFeedback({
         tone: correct ? "good" : "bad",
-        text: correct ? `Gauge ${index + 1} · HIT · ${Math.round(outcome.precision * 100)}% precision` : `Gauge ${index + 1} · ${outcome.classification}`,
+        text: correct
+          ? `Gauge ${index + 1} · HIT · ${Math.round(outcome.precision * 100)}% precision · ${nextStreak} streak`
+          : missedPass
+            ? `Gauge ${index + 1} · MISSED TARGET PASS`
+            : `Gauge ${index + 1} · ${outcome.classification}`,
       });
-      gaugesRef.current[index] = rescheduleGauge(gauge, nextAttempts);
+      gaugesRef.current = gaugesRef.current.map((currentGauge, gaugeIndex) =>
+        gaugeIndex === index
+          ? rescheduleGauge(currentGauge, nextAttempts)
+          : { ...currentGauge, angularVelocity: escalatedVelocity(currentGauge.angularVelocity, nextAttempts) });
+      targetSeenRef.current[index] = false;
       if (nextAttempts < total) return;
       finished.current = true;
       telemetry.record("GAME_COMPLETED", total, { hits: nextHits });
@@ -149,17 +139,60 @@ export function StockMasterGame(props: GameProps) {
                 misses: total - nextHits,
                 earlyClicks: records.filter((record) => record.response.startsWith("EARLY")).length,
                 lateClicks: records.filter((record) => record.response.startsWith("LATE")).length,
+                missedTargetPasses: records.filter((record) => record.response.startsWith("MISSED_PASS")).length,
                 precision: precision * 100,
                 meanAngularError: mean(records.map((record) => Number(record.response.split(":")[2]))),
                 meanTimeToTargetAtClick: mean(records.map((record) => Number(record.response.split(":")[3]))),
                 gaugeCount,
+                bestStreak: bestStreakRef.current,
               },
             }),
           ),
         650,
       );
     },
-    [attempts, gaugeCount, hits, props, telemetry, total],
+    [gaugeCount, props, telemetry, total],
+  );
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    let frame = 0;
+    const render = (timestamp: number) => {
+      const bounds = canvas.getBoundingClientRect();
+      const ratio = Math.min(2, window.devicePixelRatio || 1);
+      const pixelWidth = Math.max(1, Math.floor(bounds.width * ratio));
+      const pixelHeight = Math.max(1, Math.floor(bounds.height * ratio));
+      if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
+        canvas.width = pixelWidth;
+        canvas.height = pixelHeight;
+      }
+      const deltaSeconds = lastFrame.current === 0 ? 0 : Math.min(0.05, (timestamp - lastFrame.current) / 1000);
+      lastFrame.current = timestamp;
+      const missedIndices: number[] = [];
+      if (!props.paused) {
+        gaugesRef.current.forEach((gauge, index) => {
+          gauge.angle = normalizeAngle(gauge.angle + gauge.angularVelocity * deltaSeconds);
+          const pass = targetPassState(gauge, targetSeenRef.current[index]);
+          targetSeenRef.current[index] = pass.inside;
+          if (pass.missed) missedIndices.push(index);
+        });
+      }
+      missedIndices.forEach((index) => completeAttempt(index, true));
+      const context = canvas.getContext("2d");
+      if (context) {
+        context.setTransform(ratio, 0, 0, ratio, 0, 0);
+        draw(context, bounds.width, bounds.height);
+      }
+      frame = requestAnimationFrame(render);
+    };
+    frame = requestAnimationFrame(render);
+    return () => cancelAnimationFrame(frame);
+  }, [completeAttempt, draw, props.paused]);
+
+  const activate = useCallback(
+    (index: number) => completeAttempt(index),
+    [completeAttempt],
   );
 
   useEffect(() => {
@@ -187,8 +220,8 @@ export function StockMasterGame(props: GameProps) {
       eyebrow="Divided attention"
       round={attempts}
       total={total}
-      score={`${hits} precise hits`}
-      aside={<div><span className="aside-label">TARGET</span><strong>Blue arc</strong><p>Click a gauge or press its number while the needle is inside the arc.</p>{props.debug && props.mode !== "simulation" && <code>debug · trajectory active</code>}</div>}
+      score={`${hits} hits · ${streak} streak`}
+      aside={<div><span className="aside-label">TARGET</span><strong>Blue arc</strong><p>Each number always maps to the same gauge. Unclaimed target passes count as misses, and gauge speed rises as the run progresses.</p>{props.debug && props.mode !== "simulation" && <code>debug · trajectory active</code>}</div>}
     >
       <canvas ref={canvasRef} className="gauge-canvas" onClick={onCanvasClick} aria-label={`${gaugeCount} animated timing gauges. Use number keys 1 through ${gaugeCount}.`} />
       <Feedback tone={feedback.tone}>{feedback.text}</Feedback>

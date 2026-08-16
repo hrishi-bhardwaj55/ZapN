@@ -2,17 +2,17 @@ import { randomInt, seededRandom } from "@/lib/engine";
 
 export const COLORS = ["navy", "teal", "amber", "coral"] as const;
 export const FIGURES = ["circle", "triangle", "square", "diamond"] as const;
-export const COUNTS = [1, 2, 3] as const;
+export const PATTERNS = ["solid", "striped", "outline"] as const;
 
 export interface FigureGuess {
   color: (typeof COLORS)[number];
   figure: (typeof FIGURES)[number];
-  count: (typeof COUNTS)[number];
+  pattern: (typeof PATTERNS)[number];
 }
 
 export function allCandidates(): FigureGuess[] {
   return COLORS.flatMap((color) =>
-    FIGURES.flatMap((figure) => COUNTS.map((count) => ({ color, figure, count }))),
+    FIGURES.flatMap((figure) => PATTERNS.map((pattern) => ({ color, figure, pattern }))),
   );
 }
 
@@ -21,19 +21,19 @@ export function generateTarget(seed: string): FigureGuess {
   return {
     color: COLORS[randomInt(random, 0, COLORS.length - 1)],
     figure: FIGURES[randomInt(random, 0, FIGURES.length - 1)],
-    count: COUNTS[randomInt(random, 0, COUNTS.length - 1)],
+    pattern: PATTERNS[randomInt(random, 0, PATTERNS.length - 1)],
   };
 }
 
 export function figureFeedback(guess: FigureGuess, target: FigureGuess) {
-  const exact = Number(guess.color === target.color) + Number(guess.figure === target.figure) + Number(guess.count === target.count);
-  return { exact, different: 3 - exact };
+  const right = Number(guess.color === target.color) + Number(guess.figure === target.figure) + Number(guess.pattern === target.pattern);
+  return { right, wrong: 3 - right };
 }
 
-export function reduceCandidates(candidates: FigureGuess[], guess: FigureGuess, exact: number) {
-  return candidates.filter((candidate) => figureFeedback(guess, candidate).exact === exact);
+export function reduceCandidates(candidates: FigureGuess[], guess: FigureGuess, right: number) {
+  return candidates.filter((candidate) => figureFeedback(guess, candidate).right === right);
 }
 
 export function sameGuess(left: FigureGuess, right: FigureGuess) {
-  return left.color === right.color && left.figure === right.figure && left.count === right.count;
+  return left.color === right.color && left.figure === right.figure && left.pattern === right.pattern;
 }

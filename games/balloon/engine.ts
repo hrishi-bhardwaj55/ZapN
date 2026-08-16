@@ -19,8 +19,12 @@ export function generateBalloons(
 ): BalloonTrial[] {
   const random = seededRandom(`${seed}:balloon`);
   const colors: BalloonTrial["color"][] = ["blue", "yellow", "orange"];
-  return Array.from({ length: count }, (_, index) => {
-    const color = colors[index % colors.length];
+  const trialColors = Array.from({ length: count }, (_, index) => colors[index % colors.length]);
+  for (let index = trialColors.length - 1; index > 0; index -= 1) {
+    const swapIndex = randomInt(random, 0, index);
+    [trialColors[index], trialColors[swapIndex]] = [trialColors[swapIndex], trialColors[index]];
+  }
+  return trialColors.map((color) => {
     const [min, max] = ranges[difficulty][color];
     return { color, breakpoint: randomInt(random, min, max) };
   });
@@ -43,7 +47,7 @@ export function explosionPenalty(currentValue: number, multiplier = 0) {
   return currentValue * Math.max(0, multiplier);
 }
 
-export function balloonScore(banked: number, explosions: number, rounds: number, difficulty: Difficulty = "medium") {
-  const target = difficultyValue(difficulty, { easy: 20, medium: 28, hard: 38 });
-  return Math.max(0, Math.min(100, (banked / target) * 80 + (1 - explosions / rounds) * 20));
+export function balloonScore(adjustedAveragePumps: number, difficulty: Difficulty = "medium") {
+  const upperBreakpoint = difficultyValue(difficulty, { easy: 14, medium: 16, hard: 18 });
+  return Math.max(0, Math.min(100, (adjustedAveragePumps / upperBreakpoint) * 100));
 }

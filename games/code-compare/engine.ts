@@ -1,6 +1,6 @@
 import { randomInt, seededRandom, shuffle } from "@/lib/engine";
 
-const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const DIGITS = "0123456789";
 
 export interface CodeTrial {
   reference: string;
@@ -12,14 +12,14 @@ export interface CodeTrial {
 export function generateCode(random: () => number, length: number) {
   return Array.from(
     { length },
-    () => ALPHABET[randomInt(random, 0, ALPHABET.length - 1)],
+    () => DIGITS[randomInt(random, 0, DIGITS.length - 1)],
   ).join("");
 }
 
 export function mutateCode(random: () => number, code: string, position: number) {
   let replacement = code[position];
   while (replacement === code[position]) {
-    replacement = ALPHABET[randomInt(random, 0, ALPHABET.length - 1)];
+    replacement = DIGITS[randomInt(random, 0, DIGITS.length - 1)];
   }
   return `${code.slice(0, position)}${replacement}${code.slice(position + 1)}`;
 }
@@ -32,8 +32,11 @@ export function generateCodeTrials(seed: string, count: number, length: number):
     const positions: number[] = [];
     while (distractors.size < 3) {
       const position = randomInt(random, 0, length - 1);
-      distractors.add(mutateCode(random, reference, position));
-      positions.push(position);
+      const distractor = mutateCode(random, reference, position);
+      if (!distractors.has(distractor)) {
+        distractors.add(distractor);
+        positions.push(position);
+      }
     }
     const choices = shuffle([reference, ...distractors], random);
     return {

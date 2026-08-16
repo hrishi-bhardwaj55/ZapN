@@ -8,12 +8,12 @@ import { generateCodeTrials } from "./engine";
 
 export function CodeCompareGame(props: GameProps) {
   const total = props.mode === "tutorial" ? 4 : props.config?.trials ?? difficultyValue(props.difficulty, { easy: 7, medium: 9, hard: 11 });
-  const length = difficultyValue(props.difficulty, { easy: 5, medium: 7, hard: 9 });
-  const responseWindow = props.config?.timeLimitMs || difficultyValue(props.difficulty, { easy: 4000, medium: 3000, hard: 2200 });
+  const length = difficultyValue(props.difficulty, { easy: 8, medium: 10, hard: 12 });
+  const responseWindow = props.config?.timeLimitMs || difficultyValue(props.difficulty, { easy: 2200, medium: 1500, hard: 1000 });
   const trials = useMemo(() => generateCodeTrials(props.seed, total, length), [props.seed, total, length]);
   const telemetry = useGameTelemetry(props.sessionId, "code-compare");
   const startedAt = useRef(new Date().toISOString());
-  const shownAt = useRef(performance.now());
+  const shownAt = useRef(0);
   const roundsRef = useRef<RoundRecord[]>([]);
   const locked = useRef(false);
   const finished = useRef(false);
@@ -39,7 +39,7 @@ export function CodeCompareGame(props: GameProps) {
             codeLength: length,
             timeouts: records.filter((record) => record.response === "timeout").length,
             consistencyMs: standardDeviation(records.map((record) => record.reactionTimeMs).filter(Boolean)),
-            lateMismatchErrors: records.filter((record) => !record.correct && Number(record.response) > 1).length,
+            distractorErrors: records.filter((record) => !record.correct && record.response !== "timeout").length,
           },
         }),
       );
@@ -110,18 +110,18 @@ export function CodeCompareGame(props: GameProps) {
       eyebrow="Visual precision"
       round={round}
       total={total}
-      score={`${length} characters`}
+      score={`${length} digits · ${responseWindow} ms`}
       aside={
         <div>
           <span className="aside-label">RULE</span>
           <strong>Exactly one match</strong>
-          <p>Compare every character. Similar-looking distractors differ by at least one.</p>
+          <p>Compare every digit. Three near-matches differ by only one position.</p>
           {props.debug && props.mode !== "simulation" && <code>debug · answer {trial.answer + 1}</code>}
         </div>
       }
     >
       <div className="reference-code">
-        <small>REFERENCE CODE</small>
+        <small>REFERENCE NUMBER</small>
         <strong>{trial.reference}</strong>
       </div>
       <p className="prompt-line">Select the exact match.</p>

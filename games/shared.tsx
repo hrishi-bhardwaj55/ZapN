@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { createTelemetry } from "@/lib/engine";
 import type { GameId } from "@/lib/types";
 
@@ -67,15 +67,13 @@ export function Feedback({
 }
 
 export function useGameTelemetry(sessionId: string, gameId: GameId) {
-  const telemetry = useRef<ReturnType<typeof createTelemetry> | null>(null);
-  if (!telemetry.current) telemetry.current = createTelemetry(sessionId, gameId);
+  const [telemetry] = useState(() => createTelemetry(sessionId, gameId));
 
   useEffect(() => {
-    const current = telemetry.current!;
-    current.record("GAME_STARTED", 0);
-    const onBlur = () => current.record("FOCUS_LOST", 0, { source: "window" });
+    telemetry.record("GAME_STARTED", 0);
+    const onBlur = () => telemetry.record("FOCUS_LOST", 0, { source: "window" });
     const onVisibility = () => {
-      if (document.hidden) current.record("FOCUS_LOST", 0, { source: "visibility" });
+      if (document.hidden) telemetry.record("FOCUS_LOST", 0, { source: "visibility" });
     };
     window.addEventListener("blur", onBlur);
     document.addEventListener("visibilitychange", onVisibility);
@@ -83,8 +81,8 @@ export function useGameTelemetry(sessionId: string, gameId: GameId) {
       window.removeEventListener("blur", onBlur);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, []);
-  return telemetry.current;
+  }, [telemetry]);
+  return telemetry;
 }
 
 export function useCountdown(seconds = 3) {

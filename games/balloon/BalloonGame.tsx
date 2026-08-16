@@ -7,15 +7,16 @@ import { Feedback, GameShell, useGameTelemetry } from "../shared";
 import { balloonScale, balloonScore, cashOutValue, generateBalloons, pumpBalloon } from "./engine";
 
 export function BalloonGame(props: GameProps) {
-  const total = props.mode === "tutorial" ? 2 : props.config?.trials ?? difficultyValue(props.difficulty, { easy: 4, medium: 5, hard: 6 });
+  const total = props.mode === "tutorial" ? 2 : props.config?.trials ?? difficultyValue(props.difficulty, { easy: 8, medium: 12, hard: 20 });
+  const deadlineEnabled = props.timed && props.mode === "simulation";
   const trials = useMemo(
     () => generateBalloons(props.seed, props.difficulty, total),
     [props.seed, props.difficulty, total],
   );
   const telemetry = useGameTelemetry(props.sessionId, "balloon");
   const startedAt = useRef(new Date().toISOString());
-  const shownAt = useRef(performance.now());
-  const deadline = useRef(performance.now() + (props.config?.timeLimitMs || 15000));
+  const shownAt = useRef(0);
+  const deadline = useRef(0);
   const pauseStarted = useRef<number | null>(null);
   const inputLocked = useRef(false);
   const roundsRef = useRef<RoundRecord[]>([]);
@@ -27,19 +28,32 @@ export function BalloonGame(props: GameProps) {
   const [status, setStatus] = useState<"active" | "burst" | "banked" | "timeout">("active");
   const [timeLeft, setTimeLeft] = useState(props.config?.timeLimitMs || 15000);
 
+  useEffect(() => {
+    const timestamp = performance.now();
+    const duration = props.config?.timeLimitMs || 15000;
+    shownAt.current = timestamp;
+    deadline.current = timestamp + duration;
+  }, [props.config?.timeLimitMs]);
+
   const finish = useCallback(
     (nextRounds: RoundRecord[], nextBanked: number, nextExplosions: number) => {
       if (finished.current) return;
       finished.current = true;
       telemetry.record("GAME_COMPLETED", total, { banked: nextBanked });
       const pumpsByRound = nextRounds.map((item) => Number(item.stimulus.split(":")[1]));
-      const cashOutPumps = nextRounds.filter((item) => item.correct).map((item) => Number(item.stimulus.split(":")[1]));
+      const cashOutRounds = nextRounds.filter((item) => item.response === "cash-out");
+      const cashOutPumps = cashOutRounds.map((item) => Number(item.stimulus.split(":")[1]));
+      const adjustedAveragePumps = mean(cashOutPumps);
       const postExplosionChanges = nextRounds.reduce<number[]>((changes, item, index) => {
-        if (index > 0 && !nextRounds[index - 1].correct) {
+        if (index > 0 && nextRounds[index - 1].response === "burst") {
           changes.push(Number(item.stimulus.split(":")[1]) - Number(nextRounds[index - 1].stimulus.split(":")[1]));
         }
         return changes;
       }, []);
+      const adjustedPumpsForColor = (color: "blue" | "yellow" | "orange") =>
+        mean(cashOutRounds
+          .filter((item) => trials[item.round - 1]?.color === color)
+          .map((item) => Number(item.stimulus.split(":")[1])));
       props.onFinish(
         buildResult({
           sessionId: props.sessionId,
@@ -50,21 +64,20 @@ export function BalloonGame(props: GameProps) {
           startedAt: startedAt.current,
           rounds: nextRounds,
           telemetry: telemetry.events,
-          score: balloonScore(nextBanked, nextExplosions, total, props.difficulty),
+          score: balloonScore(adjustedAveragePumps, props.difficulty),
           metrics: {
+            adjustedAveragePumps,
             bankedMoney: nextBanked,
             explosions: nextExplosions,
-            cashOuts: total - nextExplosions,
+            cashOuts: cashOutRounds.length,
             averagePumps: mean(pumpsByRound),
-            averageAdjustedPumps: mean(cashOutPumps),
             pumpVariance: standardDeviation(pumpsByRound) ** 2,
             explosionPercentage: (nextExplosions / total) * 100,
             postExplosionAdaptation: mean(postExplosionChanges),
             rollingAveragePumps: mean(pumpsByRound.slice(-3)),
-            blueAveragePumps: mean(pumpsByRound.filter((_, index) => trials[index]?.color === "blue")),
-            yellowAveragePumps: mean(pumpsByRound.filter((_, index) => trials[index]?.color === "yellow")),
-            orangeAveragePumps: mean(pumpsByRound.filter((_, index) => trials[index]?.color === "orange")),
-            riskCalibration: Math.max(0, 100 - nextExplosions * 18),
+            blueAdjustedAveragePumps: adjustedPumpsForColor("blue"),
+            yellowAdjustedAveragePumps: adjustedPumpsForColor("yellow"),
+            orangeAdjustedAveragePumps: adjustedPumpsForColor("orange"),
           },
         }),
       );
@@ -93,7 +106,7 @@ export function BalloonGame(props: GameProps) {
         telemetry.record("ROUND_STARTED", round + 1, { seed: props.seed });
       }, 620);
     },
-    [finish, props.seed, round, telemetry, total],
+    [finish, props.config?.timeLimitMs, props.seed, round, telemetry, total],
   );
 
   const pump = useCallback(() => {
@@ -109,13 +122,12 @@ export function BalloonGame(props: GameProps) {
     setPumps(outcome.nextPump);
     setExplosions(nextExplosions);
     setStatus("burst");
-    telemetry.record("INCORRECT_RESPONSE", round, { breakpoint: trials[round].breakpoint });
     advance(
       {
         round: round + 1,
         stimulus: `pumps:${outcome.nextPump}`,
-        response: "exploded",
-        correct: false,
+        response: "burst",
+        correct: true,
         reactionTimeMs: performance.now() - shownAt.current,
         score: 0,
       },
@@ -130,7 +142,6 @@ export function BalloonGame(props: GameProps) {
     const nextBanked = banked + cashOutValue(pumps);
     setBanked(nextBanked);
     setStatus("banked");
-    telemetry.record("CORRECT_RESPONSE", round, { action: "CASH_OUT", value: pumps });
     advance(
       {
         round: round + 1,
@@ -143,7 +154,7 @@ export function BalloonGame(props: GameProps) {
       nextBanked,
       explosions,
     );
-  }, [advance, banked, explosions, props.paused, pumps, round, status, telemetry]);
+  }, [advance, banked, explosions, props.paused, pumps, round, status]);
 
   const timeOut = useCallback(() => {
     if (props.paused || inputLocked.current || status !== "active" || finished.current) return;
@@ -165,7 +176,7 @@ export function BalloonGame(props: GameProps) {
   }, [advance, banked, explosions, props.config?.timeLimitMs, props.paused, pumps, round, status, telemetry]);
 
   useEffect(() => {
-    if (!props.timed || props.mode === "tutorial" || status !== "active") return;
+    if (!deadlineEnabled || status !== "active") return;
     if (props.paused) {
       pauseStarted.current = performance.now();
       return;
@@ -184,7 +195,7 @@ export function BalloonGame(props: GameProps) {
     };
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [props.mode, props.paused, props.timed, round, status, timeOut]);
+  }, [deadlineEnabled, props.paused, round, status, timeOut]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -205,12 +216,12 @@ export function BalloonGame(props: GameProps) {
       eyebrow="Risk calibration"
       round={round}
       total={total}
-      score={props.timed && props.mode !== "tutorial" ? `$${banked.toFixed(0)} · ${(timeLeft / 1000).toFixed(1)}s` : `$${banked.toFixed(0)} banked`}
+      score={deadlineEnabled ? `$${banked.toFixed(0)} permanent · ${(timeLeft / 1000).toFixed(1)}s` : `$${banked.toFixed(0)} permanent`}
       aside={
         <div>
           <span className="aside-label">BALLOON CLASS</span>
           <strong className="capitalize">{trial.color}</strong>
-          <p>Different colors carry different hidden pressure profiles.</p>
+          <p>Each color has a hidden pressure profile. A burst loses only the temporary value; your permanent bank is safe.</p>
           {props.debug && props.mode !== "simulation" && (
             <code>debug · breakpoint {trial.breakpoint}</code>
           )}
@@ -227,18 +238,18 @@ export function BalloonGame(props: GameProps) {
         </div>
       </div>
       <div className="value-readout">
-        <small>CURRENT VALUE</small>
+        <small>TEMPORARY VALUE</small>
         <strong>${pumps.toFixed(0)}</strong>
       </div>
-      {status === "burst" && <Feedback tone="bad">BURST · temporary value lost</Feedback>}
-      {status === "banked" && <Feedback tone="good">BANKED · ${pumps}</Feedback>}
+      {status === "burst" && <Feedback tone="bad">BURST · ${pumps} temporary lost · permanent bank safe</Feedback>}
+      {status === "banked" && <Feedback tone="good">BANKED · ${pumps} transferred to permanent</Feedback>}
       {status === "timeout" && <Feedback tone="bad">TIMEOUT · temporary value lost</Feedback>}
       <div className="game-actions two-up">
         <button className="btn secondary" onClick={pump} disabled={status !== "active"}>
           <kbd>SPACE</kbd> Pump +$1
         </button>
         <button className="btn primary" onClick={cashOut} disabled={status !== "active" || pumps === 0}>
-          <kbd>ENTER</kbd> Cash out
+          <kbd>ENTER</kbd> Collect
         </button>
       </div>
     </GameShell>

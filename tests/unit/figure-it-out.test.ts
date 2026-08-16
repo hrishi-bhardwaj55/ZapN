@@ -3,15 +3,20 @@ import { allCandidates, figureFeedback, generateTarget, reduceCandidates } from 
 
 describe("Figure It Out engine", () => {
   it("computes exact attribute feedback", () => {
-    const target = { color: "navy", figure: "circle", count: 2 } as const;
-    expect(figureFeedback(target, target)).toEqual({ exact: 3, different: 0 });
-    expect(figureFeedback({ color: "teal", figure: "circle", count: 1 }, target)).toEqual({ exact: 1, different: 2 });
+    const target = { color: "navy", figure: "circle", pattern: "striped" } as const;
+    expect(figureFeedback(target, target)).toEqual({ right: 3, wrong: 0 });
+    expect(figureFeedback({ color: "teal", figure: "circle", pattern: "solid" }, target)).toEqual({ right: 1, wrong: 2 });
   });
   it("reduces candidate space without removing the target", () => {
     const target = generateTarget("hidden");
-    const guess = { color: "navy", figure: "square", count: 1 } as const;
-    const reduced = reduceCandidates(allCandidates(), guess, figureFeedback(guess, target).exact);
+    const guess = { color: "navy", figure: "square", pattern: "solid" } as const;
+    const reduced = reduceCandidates(allCandidates(), guess, figureFeedback(guess, target).right);
     expect(reduced).toContainEqual(target);
     expect(reduced.length).toBeLessThan(allCandidates().length);
+  });
+  it("uses color, shape, and pattern for every candidate", () => {
+    const candidates = allCandidates();
+    expect(candidates).toHaveLength(48);
+    expect(new Set(candidates.map((candidate) => candidate.pattern))).toEqual(new Set(["solid", "striped", "outline"]));
   });
 });

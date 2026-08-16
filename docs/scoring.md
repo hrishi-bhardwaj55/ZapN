@@ -10,7 +10,7 @@ The shared default heuristic weights accuracy at 72% and speed at up to 28%, wit
 | Skyscraper | Actual vs optimal moves, invalid moves | Planning efficiency |
 | Shapeshift | Accuracy, median RT, anticipations | Rule accuracy before speed |
 | Code Compare | Accuracy, median RT, code length | Exact discrimination |
-| Pincode | Accuracy, span, transformation | Working-memory span |
+| Digit | Accuracy, span, transformation block | Working-memory span by Repeat/Reverse/Sort |
 | Number Box | Solve rate, solve time, validity | Constraint-correct solving |
 | Figure It Out | Guesses, information gain, repeats | Information efficiency |
 | The Switch | Switch/repeat RT and accuracy | Accuracy and switch cost |

@@ -33,16 +33,18 @@ const GAME_COMPONENTS: Record<GameId, React.ComponentType<GameProps>> = {
 type ConfigState = Record<GameId, { trials: number; timeLimitMs: number; adaptive: boolean; presentationMode?: "mixed" | "simultaneous" | "sequential"; interDigitDelayMs?: number }>;
 
 const DEFAULT_CONFIG: ConfigState = {
-  balloon: { trials: 5, timeLimitMs: 15000, adaptive: false },
+  balloon: { trials: 12, timeLimitMs: 0, adaptive: false },
   skyscraper: { trials: 1, timeLimitMs: 0, adaptive: false },
   shapeshift: { trials: 10, timeLimitMs: 1600, adaptive: true },
-  "code-compare": { trials: 9, timeLimitMs: 3000, adaptive: true },
-  pincode: { trials: 5, timeLimitMs: 10000, adaptive: true, presentationMode: "mixed", interDigitDelayMs: 650 },
+  "code-compare": { trials: 9, timeLimitMs: 1500, adaptive: true },
+  pincode: { trials: 12, timeLimitMs: 10000, adaptive: true, presentationMode: "sequential", interDigitDelayMs: 650 },
   "number-box": { trials: 4, timeLimitMs: 30000, adaptive: false },
   "figure-it-out": { trials: 7, timeLimitMs: 0, adaptive: false },
-  switch: { trials: 11, timeLimitMs: 2400, adaptive: true },
+  switch: { trials: 12, timeLimitMs: 2000, adaptive: true },
   "stock-master": { trials: 11, timeLimitMs: 0, adaptive: true },
 };
+
+const CONFIG_STORAGE_KEY = "cortex-game-config-v2";
 
 function ScoreRing({ score }: { score: number }) {
   const rounded = Math.round(score);
@@ -51,6 +53,39 @@ function ScoreRing({ score }: { score: number }) {
 
 function BrandMark() {
   return <span className="brand-mark" aria-hidden="true"><i /><i /><i /></span>;
+}
+
+function primaryResultMetric(result: GameResult) {
+  if (result.gameId === "balloon") return {
+    label: "ADJUSTED AVG PUMPS",
+    value: (result.metrics.adjustedAveragePumps || 0).toFixed(1),
+    detail: `$${Math.round(result.metrics.bankedMoney || 0)} banked · ${Math.round(result.metrics.explosions || 0)} bursts`,
+  };
+  if (result.gameId === "skyscraper") return {
+    label: "PLANNING EFFICIENCY",
+    value: `${Math.round(result.metrics.planningEfficiency || 0)}%`,
+    detail: `${result.metrics.actualMoves} actual · ${result.metrics.optimalMoves} optimal · ${result.metrics.invalidMoves} invalid`,
+  };
+  if (result.gameId === "figure-it-out") return {
+    label: "DEDUCTION",
+    value: result.metrics.solved ? "Solved" : "Unsolved",
+    detail: `${Math.round(result.metrics.guessesRequired || 0)} guesses · ${(result.metrics.averageInformationGain || 0).toFixed(2)} bits/guess`,
+  };
+  if (result.gameId === "pincode") return {
+    label: "REPEAT · REVERSE · SORT",
+    value: `${Math.round(result.metrics.repeatAccuracy || 0)}% · ${Math.round(result.metrics.reverseAccuracy || 0)}% · ${Math.round(result.metrics.sortAccuracy || 0)}%`,
+    detail: `Max spans ${Math.round(result.metrics.forwardMaxSpan || 0)} · ${Math.round(result.metrics.reverseMaxSpan || 0)} · ${Math.round(result.metrics.sortedMaxSpan || 0)}`,
+  };
+  if (result.gameId === "stock-master") return {
+    label: "TARGET HITS",
+    value: `${Math.round(result.accuracy)}%`,
+    detail: `${Math.round(result.metrics.successfulHits || 0)} hits · best streak ${Math.round(result.metrics.bestStreak || 0)}`,
+  };
+  return {
+    label: "ACCURACY",
+    value: `${Math.round(result.accuracy)}%`,
+    detail: `${result.correct} / ${result.totalRounds} correct`,
+  };
 }
 
 export function SimulatorApp({ initialView = "home" }: { initialView?: View }) {
@@ -77,14 +112,19 @@ export function SimulatorApp({ initialView = "home" }: { initialView?: View }) {
   const debug = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("debug") === "true" && process.env.NODE_ENV !== "production";
 
   useEffect(() => {
-    setHistory(loadHistory());
-    const storedTheme = loadTheme();
-    setTheme(storedTheme);
-    document.documentElement.dataset.theme = storedTheme;
-    try {
-      const saved = localStorage.getItem("cortex-game-config");
-      if (saved) setConfig({ ...DEFAULT_CONFIG, ...JSON.parse(saved) });
-    } catch {}
+    const timer = window.setTimeout(() => {
+      setHistory(loadHistory());
+      const storedTheme = loadTheme();
+      setTheme(storedTheme);
+      document.documentElement.dataset.theme = storedTheme;
+      try {
+        const saved = localStorage.getItem(CONFIG_STORAGE_KEY);
+        if (saved) setConfig({ ...DEFAULT_CONFIG, ...JSON.parse(saved) });
+      } catch {
+        /* Ignore malformed local configuration and retain reference defaults. */
+      }
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -168,8 +208,13 @@ export function SimulatorApp({ initialView = "home" }: { initialView?: View }) {
   };
 
   const game = GAME_MAP[selectedGame];
+  const instructionIsTimed = timed && (
+    config[selectedGame].timeLimitMs > 0 ||
+    (selectedGame === "balloon" && mode === "simulation")
+  );
   const ActiveGame = GAME_COMPONENTS[selectedGame];
   const previousForLast = lastResult ? history.find((result) => result.gameId === lastResult.gameId && result.id !== lastResult.id) : null;
+  const resultPrimary = lastResult ? primaryResultMetric(lastResult) : null;
 
   return (
     <div className="app-shell">
@@ -199,7 +244,7 @@ export function SimulatorApp({ initialView = "home" }: { initialView?: View }) {
               <div className="session-card">
                 <div className="session-card-head"><span>NEXT SESSION</span><strong>Full circuit</strong></div>
                 <div className="session-orbit"><BrandMark /><span>9</span><small>games</small></div>
-                <div className="session-stats"><span><small>EST. TIME</small><strong>24 min</strong></span><span><small>DIFFICULTY</small><strong>{difficulty}</strong></span></div>
+                <div className="session-stats"><span><small>EST. TIME</small><strong>30 min</strong></span><span><small>DIFFICULTY</small><strong>{difficulty}</strong></span></div>
                 <div className="difficulty-tabs" aria-label="Difficulty">{(["easy", "medium", "hard"] as Difficulty[]).map((level) => <button key={level} className={difficulty === level ? "active" : ""} onClick={() => setDifficulty(level)}>{level}</button>)}</div>
               </div>
               <div className="precision-lines" aria-hidden="true"><i /><i /><i /><i /></div>
@@ -207,7 +252,7 @@ export function SimulatorApp({ initialView = "home" }: { initialView?: View }) {
           </section>
 
           <section className="game-library">
-            <div className="section-heading"><div><span className="eyebrow">PRACTICE LIBRARY</span><h2>Nine skills. One integrated system.</h2></div><div className="practice-controls"><label><input type="checkbox" checked={timed} onChange={(event) => setTimed(event.target.checked)} /> Timed practice</label><span>Seed <code>{seed}</code></span></div></div>
+            <div className="section-heading"><div><span className="eyebrow">PRACTICE LIBRARY</span><h2>Nine skills. One integrated system.</h2></div><div className="practice-controls"><label><input type="checkbox" checked={timed} onChange={(event) => setTimed(event.target.checked)} /> Timed where supported</label><span>Seed <code>{seed}</code></span></div></div>
             <div className="game-grid">
               {GAMES.map((item, index) => (
                 <article className="game-card" key={item.id} style={{ "--accent": item.accent } as React.CSSProperties}>
@@ -231,7 +276,7 @@ export function SimulatorApp({ initialView = "home" }: { initialView?: View }) {
               <div className="instruction-sections"><div><small>OBJECTIVE</small><p>{game.skill}.</p></div><div><small>CONTROLS</small><p>{game.controls}</p></div><div><small>SCORING</small><p>{game.scoring}</p></div><div><small>WHAT CAUSES FAILURE</small><p>{game.failure}</p></div><div><small>EXAMPLE</small><p>{game.example}</p></div></div>
               <div className="instruction-actions">{mode !== "simulation" && <button className="btn secondary" onClick={() => startCurrent("tutorial")}>Run tutorial</button>}<button className="btn primary" onClick={() => startCurrent(mode === "tutorial" ? "practice" : mode)}>{mode === "simulation" ? "Begin assessment" : "Start practice"} <span>→</span></button></div>
             </div>
-            <div className="instruction-visual"><span className="visual-glyph">{game.glyph}</span><div><small>DIFFICULTY</small><strong>{difficulty}</strong></div><div><small>TIMING</small><strong>{timed ? "Timed" : "Untimed"}</strong></div><div><small>SEED</small><code>{replaySeed ?? seed}</code></div></div>
+            <div className="instruction-visual"><span className="visual-glyph">{game.glyph}</span><div><small>DIFFICULTY</small><strong>{difficulty}</strong></div><div><small>TIMING</small><strong>{instructionIsTimed ? "Timed" : "Untimed"}</strong></div><div><small>SEED</small><code>{replaySeed ?? seed}</code></div></div>
           </section>
         </main>
       )}
@@ -257,7 +302,7 @@ export function SimulatorApp({ initialView = "home" }: { initialView?: View }) {
         <main className="contained-page results-page">
           <button className="back-link" onClick={goHome}>← Practice library</button>
           <section className="result-hero"><div><span className="eyebrow">ATTEMPT COMPLETE</span><h1>{GAME_MAP[lastResult.gameId].name}</h1><p>{new Date(lastResult.completedAt).toLocaleString()} · {lastResult.difficulty} · seeded run</p></div><ScoreRing score={lastResult.rawScore} /></section>
-          <section className="metric-grid"><div><small>{lastResult.gameId === "skyscraper" ? "PLANNING EFFICIENCY" : "ACCURACY"}</small><strong>{Math.round(lastResult.gameId === "skyscraper" ? lastResult.metrics.planningEfficiency : lastResult.accuracy)}%</strong><span>{lastResult.gameId === "skyscraper" ? `${lastResult.metrics.actualMoves} actual · ${lastResult.metrics.optimalMoves} optimal · ${lastResult.metrics.invalidMoves} invalid` : `${lastResult.correct} / ${lastResult.totalRounds} correct`}</span></div><div><small>MEDIAN RESPONSE</small><strong>{formatMs(lastResult.medianReactionTime)}</strong><span>Mean {formatMs(lastResult.meanReactionTime)}</span></div><div><small>CONSISTENCY</small><strong>{lastResult.metrics.consistencyMs ? `${Math.round(lastResult.metrics.consistencyMs)} ms` : "Stable"}</strong><span>Lower variation is better</span></div><div><small>VS PREVIOUS</small><strong>{previousForLast ? `${lastResult.rawScore >= previousForLast.rawScore ? "+" : ""}${Math.round(lastResult.rawScore - previousForLast.rawScore)}` : "First run"}</strong><span>Comparable simulator version</span></div></section>
+          <section className="metric-grid"><div><small>{resultPrimary!.label}</small><strong>{resultPrimary!.value}</strong><span>{resultPrimary!.detail}</span></div><div><small>MEDIAN RESPONSE</small><strong>{formatMs(lastResult.medianReactionTime)}</strong><span>Mean {formatMs(lastResult.meanReactionTime)}</span></div><div><small>CONSISTENCY</small><strong>{lastResult.metrics.consistencyMs ? `${Math.round(lastResult.metrics.consistencyMs)} ms` : "Stable"}</strong><span>Lower variation is better</span></div><div><small>VS PREVIOUS</small><strong>{previousForLast ? `${lastResult.rawScore >= previousForLast.rawScore ? "+" : ""}${Math.round(lastResult.rawScore - previousForLast.rawScore)}` : "First run"}</strong><span>Comparable simulator version</span></div></section>
           <section className="analysis-card"><div><span className="eyebrow">TRAINING INSIGHT</span><h2>{primaryWeakness(lastResult)}</h2><p>{resultInsight(lastResult)}</p></div><div className="rt-bars">{lastResult.rounds.slice(0, 12).map((round) => <i key={round.round} className={round.correct ? "correct" : "incorrect"} style={{ height: `${Math.max(16, Math.min(100, round.reactionTimeMs / 25))}%` }} title={`Round ${round.round}: ${Math.round(round.reactionTimeMs)} ms`} />)}</div></section>
           <div className="result-actions"><button className="btn primary" onClick={() => openInstructions(lastResult.gameId, "practice")}>New attempt</button><button className="btn secondary" onClick={() => { setSelectedGame(lastResult.gameId); setMode("practice"); setSessionQueue([]); setSessionResults([]); setReplaySeed(lastResult.seed); setView("instructions"); }}>Replay seed</button><button className="btn ghost" onClick={() => setView("dashboard")}>View history</button></div>
         </main>
@@ -296,15 +341,15 @@ export function SimulatorApp({ initialView = "home" }: { initialView?: View }) {
 
       {view === "config" && (
         <main className="contained-page config-page">
-          <div className="page-heading"><span className="eyebrow">DEVELOPER TOOLS</span><h1>Game configuration</h1><p>Local configuration editor · versioned as zapn-simulator-v1.0</p></div>
-          <div className="config-table"><div className="config-row header"><span>Game</span><span>Trials</span><span>Response window</span><span>Adaptive</span></div>{GAMES.map((item) => <div className="config-row" key={item.id}><strong>{item.name}</strong><input type="number" min="1" max="60" value={config[item.id].trials} onChange={(event) => setConfig({ ...config, [item.id]: { ...config[item.id], trials: Number(event.target.value) } })} /><label><input type="number" min="250" max="30000" step="50" value={config[item.id].timeLimitMs} onChange={(event) => setConfig({ ...config, [item.id]: { ...config[item.id], timeLimitMs: Number(event.target.value) } })} /> ms</label><input type="checkbox" checked={config[item.id].adaptive} onChange={(event) => setConfig({ ...config, [item.id]: { ...config[item.id], adaptive: event.target.checked } })} /></div>)}</div>
-          <div className="config-special"><span>Pincode presentation</span><select value={config.pincode.presentationMode} onChange={(event) => setConfig({ ...config, pincode: { ...config.pincode, presentationMode: event.target.value as "mixed" | "simultaneous" | "sequential" } })}><option value="mixed">Mixed by level</option><option value="simultaneous">Simultaneous</option><option value="sequential">Sequential</option></select><label>Inter-digit delay <input type="number" min="200" max="2000" step="50" value={config.pincode.interDigitDelayMs} onChange={(event) => setConfig({ ...config, pincode: { ...config.pincode, interDigitDelayMs: Number(event.target.value) } })} /> ms</label></div>
-          <div className="config-actions"><button className="btn primary" onClick={() => { localStorage.setItem("cortex-game-config", JSON.stringify(config)); setConfigText("Configuration saved locally."); }}>Save configuration</button><button className="btn secondary" onClick={() => setConfigText(JSON.stringify(config, null, 2))}>Export JSON</button><button className="btn ghost" onClick={() => { setConfig(DEFAULT_CONFIG); localStorage.removeItem("cortex-game-config"); }}>Reset defaults</button></div>
+          <div className="page-heading"><span className="eyebrow">DEVELOPER TOOLS</span><h1>Game configuration</h1><p>Local configuration editor · versioned as zapn-public-guide-v2.0</p></div>
+          <div className="config-table"><div className="config-row header"><span>Game</span><span>Trials</span><span>Response window</span><span>Adaptive</span></div>{GAMES.map((item) => <div className="config-row" key={item.id}><strong>{item.name}</strong><input type="number" min="1" max="90" value={config[item.id].trials} onChange={(event) => setConfig({ ...config, [item.id]: { ...config[item.id], trials: Number(event.target.value) } })} /><label><input type="number" min="0" max="120000" step="50" value={config[item.id].timeLimitMs} onChange={(event) => setConfig({ ...config, [item.id]: { ...config[item.id], timeLimitMs: Number(event.target.value) } })} /> ms</label><input type="checkbox" checked={config[item.id].adaptive} onChange={(event) => setConfig({ ...config, [item.id]: { ...config[item.id], adaptive: event.target.checked } })} /></div>)}</div>
+          <div className="config-special"><span>Digit presentation</span><select value={config.pincode.presentationMode} onChange={(event) => setConfig({ ...config, pincode: { ...config.pincode, presentationMode: event.target.value as "mixed" | "simultaneous" | "sequential" } })}><option value="sequential">Sequential (reference)</option><option value="mixed">Mixed practice extension</option><option value="simultaneous">Simultaneous practice extension</option></select><label>Inter-digit delay <input type="number" min="200" max="2000" step="50" value={config.pincode.interDigitDelayMs} onChange={(event) => setConfig({ ...config, pincode: { ...config.pincode, interDigitDelayMs: Number(event.target.value) } })} /> ms</label></div>
+          <div className="config-actions"><button className="btn primary" onClick={() => { localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(config)); setConfigText("Configuration saved locally."); }}>Save configuration</button><button className="btn secondary" onClick={() => setConfigText(JSON.stringify(config, null, 2))}>Export JSON</button><button className="btn ghost" onClick={() => { setConfig(DEFAULT_CONFIG); localStorage.removeItem(CONFIG_STORAGE_KEY); }}>Reset defaults</button></div>
           <label className="config-json"><span>Import / export buffer</span><textarea value={configText} onChange={(event) => setConfigText(event.target.value)} placeholder="Paste configuration JSON here" /><button onClick={() => { try { setConfig({ ...DEFAULT_CONFIG, ...JSON.parse(configText) }); setConfigText("Configuration imported. Save to keep it."); } catch { setConfigText("Invalid JSON. No changes applied."); } }}>Import JSON</button></label>
         </main>
       )}
 
-      {view !== "game" && <footer><span><BrandMark /> CORTEX</span><p>Practice metrics only · Public-task-inspired simulator · Audio off by default</p><button onClick={() => setView("config")}>Developer config</button></footer>}
+      {view !== "game" && <footer><span><BrandMark /> CORTEX</span><p>Practice metrics only · Mechanics aligned to the <a href="https://quantcareerhub.com/blog/optiver-zap-n-test-guide" target="_blank" rel="noreferrer">public Zap-N guide</a> · Audio off by default</p><button onClick={() => setView("config")}>Developer config</button></footer>}
     </div>
   );
 }
