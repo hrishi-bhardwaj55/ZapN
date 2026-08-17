@@ -1,0 +1,117 @@
+<svg width="1200" height="520" viewBox="0 0 1200 520" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Cortex Practice Lab</title>
+  <desc id="desc">Desktop-first cognitive game practice with nine games and five progressive levels.</desc>
+  <defs>
+    <linearGradient id="background" x1="58" y1="25" x2="1140" y2="510" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0F1E2B"/>
+      <stop offset="1" stop-color="#081219"/>
+    </linearGradient>
+    <linearGradient id="signal" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#2DD4BF"/>
+      <stop offset="1" stop-color="#38BDF8"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#02070B" flood-opacity="0.46"/>
+    </filter>
+    <style>
+      .sans { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      .mono { font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace; }
+    </style>
+  </defs>
+
+  <rect width="1200" height="520" rx="24" fill="url(#background)"/>
+  <g opacity="0.12" stroke="#B8CAD4">
+    <path d="M0 104H1200M0 208H1200M0 312H1200M0 416H1200"/>
+    <path d="M120 0V520M240 0V520M360 0V520M480 0V520M600 0V520M720 0V520M840 0V520M960 0V520M1080 0V520"/>
+  </g>
+  <circle cx="1065" cy="52" r="190" fill="#2DD4BF" opacity="0.06"/>
+  <circle cx="50" cy="505" r="210" fill="#38BDF8" opacity="0.05"/>
+
+  <g transform="translate(62 55)">
+    <g transform="translate(0 1)">
+      <rect x="0" y="24" width="8" height="16" rx="2" fill="#E7F3F7"/>
+      <rect x="13" y="14" width="8" height="26" rx="2" fill="#E7F3F7"/>
+      <rect x="26" y="2" width="8" height="38" rx="2" fill="url(#signal)"/>
+    </g>
+    <text x="51" y="34" fill="#F5FAFC" font-size="18" font-weight="800" letter-spacing="3.2" class="sans">CORTEX</text>
+    <text x="164" y="34" fill="#8EA5B2" font-size="18" font-weight="500" letter-spacing="3.2" class="sans">PRACTICE LAB</text>
+
+    <g transform="translate(0 96)">
+      <rect width="8" height="8" rx="4" fill="#2DD4BF"/>
+      <text x="22" y="9" fill="#8EA5B2" font-size="14" font-weight="650" letter-spacing="2.6" class="sans">COGNITIVE TRAINING · LOCAL FIRST</text>
+    </g>
+
+    <text x="0" y="176" fill="#F7FBFD" font-size="54" font-weight="760" letter-spacing="-2.2" class="sans">TRAIN THE DECISIONS</text>
+    <text x="0" y="240" fill="#F7FBFD" font-size="54" font-weight="760" letter-spacing="-2.2" class="sans">BETWEEN</text>
+    <text x="262" y="240" fill="#2DD4BF" font-size="57" font-weight="500" font-style="italic" letter-spacing="-2" class="sans">SIGNAL</text>
+    <text x="0" y="304" fill="#F7FBFD" font-size="54" font-weight="760" letter-spacing="-2.2" class="sans">AND NOISE.</text>
+
+    <text x="0" y="354" fill="#9DB0BA" font-size="17" class="sans">Nine deterministic cognitive games. Five progressive levels.</text>
+    <text x="0" y="380" fill="#9DB0BA" font-size="17" class="sans">Clear feedback on speed, accuracy, memory, planning, and risk.</text>
+
+    <g transform="translate(0 410)">
+      <rect width="174" height="42" rx="8" fill="#EAF7F8"/>
+      <text x="22" y="27" fill="#102330" font-size="13" font-weight="800" letter-spacing="1.2" class="sans">9 PLAYABLE GAMES</text>
+      <rect x="188" width="192" height="42" rx="8" fill="#112A36" stroke="#284754"/>
+      <text x="211" y="27" fill="#BFD1D8" font-size="13" font-weight="800" letter-spacing="1.2" class="sans">L1 → L5 PROGRESSION</text>
+    </g>
+  </g>
+
+  <g transform="translate(770 64)" filter="url(#shadow)">
+    <rect width="365" height="392" rx="18" fill="#F6F8F7"/>
+    <rect x="12" y="12" width="341" height="368" rx="12" stroke="#C9D4D7"/>
+    <text x="32" y="48" fill="#71858E" font-size="12" font-weight="750" letter-spacing="2.2" class="sans">TRAINING LIBRARY</text>
+    <text x="285" y="48" fill="#15313E" font-size="12" font-weight="850" text-anchor="end" class="mono">09 / 09</text>
+
+    <g transform="translate(32 76)" class="sans">
+      <g>
+        <rect width="142" height="64" rx="9" fill="#FFFFFF" stroke="#CFD9DC"/>
+        <circle cx="25" cy="25" r="9" fill="#FB7185"/>
+        <text x="44" y="29" fill="#17303C" font-size="13" font-weight="800">BALLOON</text>
+        <text x="16" y="51" fill="#82959D" font-size="10" letter-spacing="1">RISK CALIBRATION</text>
+      </g>
+      <g transform="translate(158 0)">
+        <rect width="142" height="64" rx="9" fill="#FFFFFF" stroke="#CFD9DC"/>
+        <rect x="16" y="16" width="18" height="18" rx="3" fill="#38BDF8"/>
+        <text x="44" y="29" fill="#17303C" font-size="13" font-weight="800">DIGIT</text>
+        <text x="16" y="51" fill="#82959D" font-size="10" letter-spacing="1">WORKING MEMORY</text>
+      </g>
+      <g transform="translate(0 80)">
+        <rect width="142" height="64" rx="9" fill="#FFFFFF" stroke="#CFD9DC"/>
+        <path d="M16 34L25 16L34 34H16Z" fill="#A78BFA"/>
+        <text x="44" y="29" fill="#17303C" font-size="13" font-weight="800">SHAPESHIFT</text>
+        <text x="16" y="51" fill="#82959D" font-size="10" letter-spacing="1">INHIBITION</text>
+      </g>
+      <g transform="translate(158 80)">
+        <rect width="142" height="64" rx="9" fill="#FFFFFF" stroke="#CFD9DC"/>
+        <text x="16" y="31" fill="#14B8A6" font-size="22" font-weight="900" class="mono">24</text>
+        <text x="50" y="29" fill="#17303C" font-size="13" font-weight="800">NUMBER BOX</text>
+        <text x="16" y="51" fill="#82959D" font-size="10" letter-spacing="1">ARITHMETIC</text>
+      </g>
+      <g transform="translate(0 160)">
+        <rect width="142" height="64" rx="9" fill="#FFFFFF" stroke="#CFD9DC"/>
+        <path d="M18 30H33M28 24L34 30L28 36" stroke="#F59E0B" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        <text x="44" y="29" fill="#17303C" font-size="13" font-weight="800">THE SWITCH</text>
+        <text x="16" y="51" fill="#82959D" font-size="10" letter-spacing="1">TASK SWITCHING</text>
+      </g>
+      <g transform="translate(158 160)">
+        <rect width="142" height="64" rx="9" fill="#FFFFFF" stroke="#CFD9DC"/>
+        <circle cx="25" cy="26" r="11" stroke="#2DD4BF" stroke-width="4"/>
+        <path d="M25 26L32 19" stroke="#17303C" stroke-width="2" stroke-linecap="round"/>
+        <text x="44" y="29" fill="#17303C" font-size="13" font-weight="800">STOCK</text>
+        <text x="16" y="51" fill="#82959D" font-size="10" letter-spacing="1">TIMING</text>
+      </g>
+    </g>
+
+    <g transform="translate(32 324)">
+      <text y="8" fill="#71858E" font-size="10" font-weight="800" letter-spacing="1.5" class="sans">TRAINING LEVEL</text>
+      <g transform="translate(0 20)">
+        <rect width="52" height="28" rx="5" fill="#E7ECEE"/><text x="26" y="19" text-anchor="middle" fill="#72858E" font-size="11" class="mono">L1</text>
+        <rect x="61" width="52" height="28" rx="5" fill="#E7ECEE"/><text x="87" y="19" text-anchor="middle" fill="#72858E" font-size="11" class="mono">L2</text>
+        <rect x="122" width="52" height="28" rx="5" fill="#E7ECEE"/><text x="148" y="19" text-anchor="middle" fill="#72858E" font-size="11" class="mono">L3</text>
+        <rect x="183" width="52" height="28" rx="5" fill="#E7ECEE"/><text x="209" y="19" text-anchor="middle" fill="#72858E" font-size="11" class="mono">L4</text>
+        <rect x="244" width="56" height="28" rx="5" fill="#17A99A"/><text x="272" y="19" text-anchor="middle" fill="#FFFFFF" font-size="11" font-weight="800" class="mono">L5</text>
+      </g>
+    </g>
+  </g>
+</svg>
