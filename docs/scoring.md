@@ -16,4 +16,4 @@ The shared default heuristic weights accuracy at 72% and speed at up to 28%, wit
 | The Switch | Switch/repeat RT and accuracy | Accuracy and switch cost |
 | Stock Master | Hits, angular error, early/late | Timing precision |
 
-Median reaction time is emphasized because extreme response times skew the mean. Both values remain stored. Best scores and previous-attempt comparisons are level-specific: an L5 result is never compared directly with an L1 result. Attempts with different `level` or `configVersion` values should not be treated as directly comparable without noting the load or rule change.
+Median reaction time is emphasized because extreme response times skew the mean. Both values remain stored. Best scores and previous-attempt comparisons are level-specific: an L10 result is never compared directly with an L1 result. Attempts with different `level` or `configVersion` values should not be treated as directly comparable without noting the load or rule change.

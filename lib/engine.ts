@@ -9,7 +9,7 @@ import type {
   RoundRecord,
 } from "./types";
 
-export const CONFIG_VERSION = "zapn-public-guide-v3.0";
+export const CONFIG_VERSION = "zapn-public-guide-v4.0";
 
 export function hashSeed(seed: string): number {
   let hash = 2166136261;

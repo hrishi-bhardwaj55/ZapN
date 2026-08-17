@@ -35,16 +35,16 @@ describe("Number Box engine", () => {
     expect(afterFirst.find((item) => item.id === "result-1")?.sourceIndexes).toEqual([1, 2]);
     expect(() => combineWorkingValues(afterFirst, "result-1", "+", "number-1", "result-2")).toThrow("no longer available");
   });
-  it("makes level 5 puzzles rarer, operator-constrained, and faster than level 1", () => {
+  it("makes level 10 puzzles rarer, operator-constrained, and faster than level 1", () => {
     const level1 = numberBoxLevelSettings(1);
-    const level5 = numberBoxLevelSettings(5);
-    expect(level5.maximumOperand).toBeGreaterThan(level1.maximumOperand);
-    expect(level5.maximumSolutionCount).toBeLessThan(level1.maximumSolutionCount);
-    expect(level5.requiredOperators.length).toBeGreaterThan(level1.requiredOperators.length);
-    expect(level5.responseWindowMs).toBeLessThan(level1.responseWindowMs);
-    const puzzles = generateNumberPuzzles("extreme-math", 8, 5);
+    const level10 = numberBoxLevelSettings(10);
+    expect(level10.maximumOperand).toBeGreaterThan(level1.maximumOperand);
+    expect(level10.maximumSolutionCount).toBeLessThan(level1.maximumSolutionCount);
+    expect(level10.requiredOperators.length).toBeGreaterThan(level1.requiredOperators.length);
+    expect(level10.responseWindowMs).toBeLessThan(level1.responseWindowMs);
+    const puzzles = generateNumberPuzzles("extreme-math", 8, 10);
     expect(puzzles.every((puzzle) => validateSolution(puzzle.solution, puzzle).valid)).toBe(true);
-    expect(puzzles.every((puzzle) => meetsOperatorRequirements(puzzle.solution, level5.requiredOperators))).toBe(true);
-    expect(puzzles.every((puzzle) => countSolutionsTo24(puzzle.numbers, level5.requiredOperators, 9) <= 8)).toBe(true);
+    expect(puzzles.every((puzzle) => meetsOperatorRequirements(puzzle.solution, level10.requiredOperators))).toBe(true);
+    expect(puzzles.every((puzzle) => countSolutionsTo24(puzzle.numbers, level10.requiredOperators, 9) <= 8)).toBe(true);
   });
 });

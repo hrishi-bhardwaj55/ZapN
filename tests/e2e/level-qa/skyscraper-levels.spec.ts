@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-async function openSkyscraper(page: Page, level: 1 | 5) {
+async function openSkyscraper(page: Page, level: 1 | 10) {
   await page.goto("/?debug=true");
   await page.waitForTimeout(900);
   await page.getByRole("button", { name: `L${level}`, exact: true }).click();
@@ -62,8 +62,8 @@ test("Skyscraper level profiles, controls, pause, layout, and result metadata", 
   await expectNoHorizontalClipping(page);
 
   await page.getByRole("button", { name: "← Exit attempt" }).click();
-  await page.getByRole("button", { name: "L5", exact: true }).click();
-  await expect(page.locator(".level-picker").last()).toContainText("L5 · Extreme");
+  await page.getByRole("button", { name: "L10", exact: true }).click();
+  await expect(page.locator(".level-picker").last()).toContainText("L10 · Extreme");
   await page.getByRole("button", { name: "Start practice" }).click();
 
   const stackButtons = page.locator(".tower-board .tower-pad");
@@ -143,6 +143,6 @@ test("Skyscraper level profiles, controls, pause, layout, and result metadata", 
     await page.getByRole("button", { name: new RegExp(`Stack ${to},`) }).click();
   }
   await expect(page.getByText("ATTEMPT COMPLETE")).toBeVisible();
-  await expect(page.getByText(/L5 Extreme · medium · seeded run/)).toBeVisible();
+  await expect(page.getByText(/L10 Extreme · medium · seeded run/)).toBeVisible();
   expect(consoleErrors).toEqual([]);
 });

@@ -35,9 +35,9 @@ describe("The Switch engine", () => {
     expect(result.switchCost).toBe(400);
   });
 
-  it("makes level five longer, faster, and more switch-heavy than level one", () => {
+  it("makes level ten longer, faster, and more switch-heavy than level one", () => {
     const levelOne = switchLevelSettings(1);
-    const levelFive = switchLevelSettings(5);
+    const levelFive = switchLevelSettings(10);
     const easyTrials = generateSwitchTrials("level-seed", levelOne.total, levelOne.sequenceLength, levelOne.switchRate);
     const hardTrials = generateSwitchTrials("level-seed", levelFive.total, levelFive.sequenceLength, levelFive.switchRate);
     const easyRate = easyTrials.filter((trial) => trial.switched).length / (easyTrials.length - 1);

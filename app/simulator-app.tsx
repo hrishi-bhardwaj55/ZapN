@@ -45,7 +45,7 @@ const DEFAULT_CONFIG: ConfigState = {
   "stock-master": { trials: 0, timeLimitMs: 0, adaptive: true },
 };
 
-const CONFIG_STORAGE_KEY = "cortex-game-config-v3";
+const CONFIG_STORAGE_KEY = "cortex-game-config-v4";
 const LEVEL_STORAGE_KEY = "cortex-training-level";
 const TIMED_GAMES = new Set<GameId>(["shapeshift", "code-compare", "pincode", "number-box", "switch", "stock-master"]);
 
@@ -136,7 +136,7 @@ export function SimulatorApp({ initialView = "home" }: { initialView?: View }) {
       document.documentElement.dataset.theme = storedTheme;
       try {
         const storedLevel = Number(localStorage.getItem(LEVEL_STORAGE_KEY));
-        if ([1, 2, 3, 4, 5].includes(storedLevel)) setLevel(storedLevel as GameLevel);
+        if (Number.isInteger(storedLevel) && storedLevel >= 1 && storedLevel <= LEVELS.length) setLevel(storedLevel as GameLevel);
         const saved = localStorage.getItem(CONFIG_STORAGE_KEY);
         if (saved) setConfig({ ...DEFAULT_CONFIG, ...JSON.parse(saved) });
       } catch {
@@ -364,7 +364,7 @@ export function SimulatorApp({ initialView = "home" }: { initialView?: View }) {
 
       {view === "config" && (
         <main className="contained-page config-page">
-          <div className="page-heading"><span className="eyebrow">DEVELOPER TOOLS</span><h1>Game configuration</h1><p>Local configuration editor · versioned as zapn-public-guide-v3.0 · zero uses the selected level profile.</p></div>
+          <div className="page-heading"><span className="eyebrow">DEVELOPER TOOLS</span><h1>Game configuration</h1><p>Local configuration editor · versioned as zapn-public-guide-v4.0 · zero uses the selected level profile.</p></div>
           <div className="config-table"><div className="config-row header"><span>Game</span><span>Trial override</span><span>Window override</span><span>Adaptive</span></div>{GAMES.map((item) => <div className="config-row" key={item.id}><strong>{item.name}</strong><input type="number" min="0" max="90" value={config[item.id].trials} onChange={(event) => setConfig({ ...config, [item.id]: { ...config[item.id], trials: Number(event.target.value) } })} /><label><input type="number" min="0" max="120000" step="50" value={config[item.id].timeLimitMs} onChange={(event) => setConfig({ ...config, [item.id]: { ...config[item.id], timeLimitMs: Number(event.target.value) } })} /> ms</label><input type="checkbox" checked={config[item.id].adaptive} onChange={(event) => setConfig({ ...config, [item.id]: { ...config[item.id], adaptive: event.target.checked } })} /></div>)}</div>
           <div className="config-special"><span>Digit presentation</span><select value={config.pincode.presentationMode} onChange={(event) => setConfig({ ...config, pincode: { ...config.pincode, presentationMode: event.target.value as "mixed" | "simultaneous" | "sequential" } })}><option value="sequential">Sequential (reference)</option><option value="mixed">Mixed practice extension</option><option value="simultaneous">Simultaneous practice extension</option></select><label>Inter-digit override <input type="number" min="0" max="2000" step="50" value={config.pincode.interDigitDelayMs} onChange={(event) => setConfig({ ...config, pincode: { ...config.pincode, interDigitDelayMs: Number(event.target.value) } })} /> ms</label></div>
           <div className="config-actions"><button className="btn primary" onClick={() => { localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(config)); setConfigText("Configuration saved locally."); }}>Save configuration</button><button className="btn secondary" onClick={() => setConfigText(JSON.stringify(config, null, 2))}>Export JSON</button><button className="btn ghost" onClick={() => { setConfig(DEFAULT_CONFIG); localStorage.removeItem(CONFIG_STORAGE_KEY); }}>Reset defaults</button></div>

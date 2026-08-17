@@ -24,7 +24,7 @@ async function assertNoHorizontalClipping(page: Page, controls: Locator[]) {
   }
 }
 
-test("Balloon levels expose real L1/L5 profiles and remain operable", async ({ page }) => {
+test("Balloon levels expose real L1/L10 profiles and remain operable", async ({ page }) => {
   const browserErrors: string[] = [];
   page.on("console", (message) => {
     if (message.type() === "error") browserErrors.push(`console: ${message.text()}`);
@@ -73,11 +73,11 @@ test("Balloon levels expose real L1/L5 profiles and remain operable", async ({ p
 
   await page.getByRole("button", { name: "← Exit attempt" }).click();
   await page.getByRole("button", { name: "← Back" }).click();
-  await page.getByRole("button", { name: "L5", exact: true }).click();
-  await expect(page.getByRole("button", { name: "L5", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "L10", exact: true }).click();
+  await expect(page.getByRole("button", { name: "L10", exact: true })).toHaveAttribute("aria-pressed", "true");
   const secondCard = await balloonCard(page);
   await secondCard.getByRole("button", { name: "Practice" }).click();
-  await expect(page.locator(".level-picker")).toContainText("L5 · Extreme");
+  await expect(page.locator(".level-picker")).toContainText("L10 · Extreme");
   await expect(page.locator(".level-picker")).toContainText("20 balloons with maximum distribution overlap and adaptation demand.");
   await page.getByRole("button", { name: "Start practice" }).click();
 
@@ -93,6 +93,6 @@ test("Balloon levels expose real L1/L5 profiles and remain operable", async ({ p
   }
 
   await expect(page.getByText("ATTEMPT COMPLETE")).toBeVisible();
-  await expect(page.locator(".result-hero")).toContainText("L5 Extreme");
+  await expect(page.locator(".result-hero")).toContainText("L10 Extreme");
   expect(browserErrors).toEqual([]);
 });

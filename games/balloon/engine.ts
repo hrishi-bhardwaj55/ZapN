@@ -10,20 +10,25 @@ export interface BalloonTrial {
 type RiskRange = readonly [number, number];
 type RiskProfile = Record<BalloonTrial["color"], RiskRange>;
 
-const LEVEL_RANGES: readonly [RiskProfile, RiskProfile, RiskProfile, RiskProfile, RiskProfile] = [
+const LEVEL_RANGES: readonly RiskProfile[] = [
   { blue: [10, 15], yellow: [6, 9], orange: [3, 5] },
   { blue: [9, 16], yellow: [6, 12], orange: [3, 8] },
   { blue: [7, 16], yellow: [4, 11], orange: [2, 8] },
+  { blue: [7, 17], yellow: [4, 12], orange: [2, 8] },
+  { blue: [7, 17], yellow: [4, 13], orange: [2, 9] },
+  { blue: [6, 17], yellow: [4, 13], orange: [2, 9] },
+  { blue: [6, 17], yellow: [4, 14], orange: [2, 10] },
+  { blue: [6, 18], yellow: [4, 14], orange: [2, 10] },
   { blue: [6, 18], yellow: [4, 15], orange: [2, 10] },
   { blue: [5, 18], yellow: [4, 17], orange: [2, 15] },
 ];
 
 export function balloonCountForLevel(level: GameLevel) {
-  return levelValue(level, [8, 10, 12, 16, 20] as const);
+  return levelValue(level, [8, 10, 12, 13, 14, 14, 15, 15, 16, 20] as const);
 }
 
 export function balloonRiskProfile(level: GameLevel, difficulty: Difficulty): RiskProfile {
-  const profile = levelValue(level, LEVEL_RANGES);
+  const profile = LEVEL_RANGES[level - 1];
   const adjustment = difficultyValue(difficulty, {
     easy: { min: 1, max: -1 },
     medium: { min: 0, max: 0 },

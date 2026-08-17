@@ -23,7 +23,7 @@ test("server-renders the complete Cortex practice library", async () => {
   assert.match(html, /Train the decisions/);
   assert.match(html, /TRAINING LEVEL/);
   assert.match(html, /L1/);
-  assert.match(html, /L5/);
+  assert.match(html, /L(?:<!-- -->)?10/);
   for (const game of ["Balloon", "Skyscraper", "Shapeshift", "Code Compare", "Digit", "Number Box", "Figure It Out", "The Switch", "Stock Master"]) {
     assert.match(html, new RegExp(game));
   }

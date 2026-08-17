@@ -8,7 +8,7 @@ type Prompt = {
   sequenceLength: number | null;
 };
 
-async function openSwitch(page: Page, level: 1 | 5) {
+async function openSwitch(page: Page, level: 1 | 10) {
   await page.goto("/?debug=true");
   await page.waitForTimeout(900);
   await page.getByRole("button", { name: `L${level}`, exact: true }).click();
@@ -98,7 +98,7 @@ function switchCount(tasks: Array<Prompt["task"]>) {
   return tasks.slice(1).filter((task, index) => task !== tasks[index]).length;
 }
 
-test("The Switch L1/L5 profiles, prompts, controls, guards, pause, layout, and metrics", async ({ page }) => {
+test("The Switch L1/L10 profiles, prompts, controls, guards, pause, layout, and metrics", async ({ page }) => {
   const consoleErrors: string[] = [];
   page.on("console", (message) => {
     if (message.type() === "error") consoleErrors.push(message.text());
@@ -158,12 +158,12 @@ test("The Switch L1/L5 profiles, prompts, controls, guards, pause, layout, and m
   expect(level1Result.metrics.switchRateTarget).toBe(25);
 
   await page.getByRole("button", { name: "← Practice library" }).click();
-  await page.getByRole("button", { name: "L5", exact: true }).click();
+  await page.getByRole("button", { name: "L10", exact: true }).click();
   const card = page.locator("article", {
     has: page.getByRole("heading", { name: "The Switch" }),
   });
   await card.getByRole("button", { name: "Practice" }).click();
-  await expect(page.locator(".level-picker").last()).toContainText("L5 · Extreme");
+  await expect(page.locator(".level-picker").last()).toContainText("L10 · Extreme");
   await page.getByRole("button", { name: "Start practice" }).click();
   await expect(page.locator(".game-status-metrics")).toContainText("1 / 18");
   await expectNoHorizontalOrLabelClipping(page);
@@ -199,11 +199,11 @@ test("The Switch L1/L5 profiles, prompts, controls, guards, pause, layout, and m
   await expect(page.getByText("ATTEMPT COMPLETE")).toBeVisible();
   expect(level5Prompts.filter((prompt) => prompt.task === "ARROWS").every((prompt) => prompt.sequenceLength === 7)).toBe(true);
   expect(switchCount(level5Prompts.map((prompt) => prompt.task))).toBe(14);
-  await expect(page.getByText(/L5 Extreme · medium · seeded run/)).toBeVisible();
+  await expect(page.getByText(/L10 Extreme · medium · seeded run/)).toBeVisible();
 
   const level5Result = await page.evaluate(() => JSON.parse(localStorage.getItem("cortex-history-v1") ?? "[]")[0]);
   expect(level5Result.gameId).toBe("switch");
-  expect(level5Result.level).toBe(5);
+  expect(level5Result.level).toBe(10);
   expect(level5Result.totalRounds).toBe(18);
   expect(level5Result.metrics.sequenceLength).toBe(7);
   expect(level5Result.metrics.responseWindowMs).toBe(1150);

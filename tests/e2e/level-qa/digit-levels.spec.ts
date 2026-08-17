@@ -11,7 +11,7 @@ function collectErrors(page: Page): BrowserErrors {
   return errors;
 }
 
-async function openDigit(page: Page, level: 1 | 5) {
+async function openDigit(page: Page, level: 1 | 10) {
   await page.goto("/?debug=true");
   await page.waitForTimeout(900);
   const timed = page.getByRole("checkbox", { name: "Timed where supported" });
@@ -132,7 +132,7 @@ async function waitForTransientText(page: Page, text: string, timeoutMs: number)
   expect(observed).toBe(true);
 }
 
-test("Digit L5 is faster and longer while preserving phases, adaptive timing, and all input guards", async ({ page }) => {
+test("Digit L10 is faster and longer while preserving phases, adaptive timing, and all input guards", async ({ page }) => {
   test.setTimeout(90_000);
   const errors = collectErrors(page);
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -157,7 +157,7 @@ test("Digit L5 is faster and longer while preserving phases, adaptive timing, an
   expect(levelOneCadenceMs).toBeGreaterThan(650);
 
   await page.getByRole("button", { name: "← Exit attempt" }).click();
-  await openDigit(page, 5);
+  await openDigit(page, 10);
   await waitForRound(page, "REPEAT", 8);
   await expect(page.locator(".game-status-metrics")).toContainText("1 / 9");
   const repeatOne = await captureSequence(page, 8);
@@ -200,7 +200,7 @@ test("Digit L5 is faster and longer while preserving phases, adaptive timing, an
   await submitWrong(page, 8);
 
   await expect(page.getByText("ATTEMPT COMPLETE")).toBeVisible({ timeout: 5_000 });
-  await expect(page.locator(".result-hero")).toContainText("L5 Extreme");
+  await expect(page.locator(".result-hero")).toContainText("L10 Extreme");
   await expect(page.locator(".metric-grid")).toContainText("REPEAT");
   await expect(page.locator(".metric-grid")).toContainText("REVERSE");
   await expect(page.locator(".metric-grid")).toContainText("SORT");
@@ -212,10 +212,10 @@ for (const viewport of [
   { width: 1440, height: 900 },
   { width: 1024, height: 768 },
 ]) {
-  test(`Digit L5 controls fit ${viewport.width}x${viewport.height} without clipping`, async ({ page }) => {
+  test(`Digit L10 controls fit ${viewport.width}x${viewport.height} without clipping`, async ({ page }) => {
     const errors = collectErrors(page);
     await page.setViewportSize(viewport);
-    await openDigit(page, 5);
+    await openDigit(page, 10);
     await expect(page.locator(".digit-display")).toBeVisible();
     await expect(page.locator(".digit-display span")).toHaveCount(1);
     await expect(page.getByRole("button", { name: "Pause", exact: true })).toBeVisible();

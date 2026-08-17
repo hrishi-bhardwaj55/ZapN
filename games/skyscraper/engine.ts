@@ -30,6 +30,11 @@ export function skyscraperOptionsForLevel(level: GameLevel): PuzzleOptions {
     { stackCount: 3, pieceCount: 3, capacity: 3, scrambleMoves: 3, minOptimalMoves: 2 },
     { stackCount: 3, pieceCount: 4, capacity: 3, scrambleMoves: 5, minOptimalMoves: 3 },
     { stackCount: 4, pieceCount: 5, capacity: 3, scrambleMoves: 7, minOptimalMoves: 4 },
+    { stackCount: 4, pieceCount: 5, capacity: 3, scrambleMoves: 8, minOptimalMoves: 4 },
+    { stackCount: 4, pieceCount: 5, capacity: 3, scrambleMoves: 9, minOptimalMoves: 5 },
+    { stackCount: 4, pieceCount: 6, capacity: 3, scrambleMoves: 8, minOptimalMoves: 5 },
+    { stackCount: 4, pieceCount: 6, capacity: 3, scrambleMoves: 9, minOptimalMoves: 5 },
+    { stackCount: 4, pieceCount: 6, capacity: 3, scrambleMoves: 9, minOptimalMoves: 6 },
     { stackCount: 4, pieceCount: 6, capacity: 3, scrambleMoves: 10, minOptimalMoves: 6 },
     { stackCount: 4, pieceCount: 7, capacity: 3, scrambleMoves: 14, minOptimalMoves: 8 },
   ] as const);

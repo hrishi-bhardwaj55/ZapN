@@ -26,13 +26,13 @@ export interface NumberBoxLevelSettings {
 
 export function numberBoxLevelSettings(level: GameLevel): NumberBoxLevelSettings {
   return {
-    minimumOperand: levelValue(level, [1, 1, 1, 2, 2]),
-    maximumOperand: levelValue(level, [6, 8, 9, 12, 13]),
-    responseWindowMs: levelValue(level, [120000, 90000, 60000, 45000, 30000]),
-    minimumSolutionCount: levelValue(level, [8, 4, 1, 1, 1]),
-    maximumSolutionCount: levelValue(level, [120, 80, 50, 20, 8]),
-    requiredOperators: levelValue(level, [[], [], [], ["/"], ["/", "-"]] as const),
-    trials: levelValue(level, [2, 3, 4, 5, 6]),
+    minimumOperand: levelValue(level, [1, 1, 1, 1, 1, 1, 2, 2, 2, 2]),
+    maximumOperand: levelValue(level, [6, 8, 9, 9, 10, 10, 10, 11, 12, 13]),
+    responseWindowMs: levelValue(level, [120000, 90000, 60000, 57000, 54000, 52000, 50000, 47500, 45000, 30000]),
+    minimumSolutionCount: levelValue(level, [8, 4, 1, 1, 1, 1, 1, 1, 1, 1]),
+    maximumSolutionCount: levelValue(level, [120, 80, 50, 45, 40, 35, 30, 25, 20, 8]),
+    requiredOperators: levelValue(level, [[], [], [], [], [], [], [], [], ["/"], ["/", "-"]] as const),
+    trials: levelValue(level, [2, 3, 4, 4, 4, 5, 5, 5, 5, 6]),
   };
 }
 

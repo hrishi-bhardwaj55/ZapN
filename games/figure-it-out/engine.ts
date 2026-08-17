@@ -14,10 +14,10 @@ export interface FigureGuess {
 
 export function figureLevelSettings(level: GameLevel) {
   return {
-    colors: COLORS.slice(0, levelValue(level, [2, 3, 4, 4, 4])) as FigureGuess["color"][],
-    figures: FIGURES.slice(0, levelValue(level, [3, 4, 4, 4, 4])) as FigureGuess["figure"][],
-    patterns: PATTERNS.slice(0, levelValue(level, [2, 2, 3, 4, 5])) as FigureGuess["pattern"][],
-    maxGuesses: levelValue(level, [8, 7, 6, 5, 4]),
+    colors: COLORS.slice(0, levelValue(level, [2, 3, 4, 4, 4, 4, 4, 4, 4, 4])) as FigureGuess["color"][],
+    figures: FIGURES.slice(0, levelValue(level, [3, 4, 4, 4, 4, 4, 4, 4, 4, 4])) as FigureGuess["figure"][],
+    patterns: PATTERNS.slice(0, levelValue(level, [2, 2, 3, 3, 3, 4, 4, 4, 4, 5])) as FigureGuess["pattern"][],
+    maxGuesses: levelValue(level, [8, 7, 6, 6, 6, 6, 5, 5, 5, 4]),
   };
 }
 

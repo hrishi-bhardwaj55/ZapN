@@ -11,7 +11,7 @@ export function CodeCompareGame(props: GameProps) {
     () => codeCompareLevelSettings(props.mode === "tutorial" ? 1 : props.level),
     [props.level, props.mode],
   );
-  const total = props.mode === "tutorial" ? 4 : props.config?.trials || [6, 8, 10, 12, 14][props.level - 1];
+  const total = props.mode === "tutorial" ? 4 : props.config?.trials || levelSettings.trials;
   const length = levelSettings.codeLength;
   const responseWindow = props.mode === "tutorial" ? 3000 : props.config?.timeLimitMs || levelSettings.responseWindowMs;
   const trials = useMemo(

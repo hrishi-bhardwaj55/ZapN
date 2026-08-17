@@ -113,15 +113,32 @@ test("history, custom session, simulation, and config routes are reachable", asy
   await expect(page.getByRole("heading", { name: "Game configuration" })).toBeVisible();
 });
 
-test("level five is selectable and applies the extreme Code Compare profile", async ({ page }) => {
+test("all ten training levels are selectable from the desktop web library", async ({ page }) => {
+  await page.goto("/");
+  await page.waitForTimeout(900);
+  const picker = page.locator(".session-card .level-picker");
+  const buttons = picker.getByRole("button");
+  await expect(buttons).toHaveCount(10);
+
+  const names = ["Foundation", "Focused", "Advanced", "Precision", "Accelerated", "Intensive", "Pressure", "Elite", "Expert", "Extreme"];
+  for (let index = 0; index < names.length; index += 1) {
+    const level = index + 1;
+    const button = picker.getByRole("button", { name: `L${level}`, exact: true });
+    await button.click();
+    await expect(button).toHaveAttribute("aria-pressed", "true");
+    await expect(picker.locator(".level-picker-head strong")).toHaveText(`L${level} · ${names[index]}`);
+  }
+});
+
+test("level ten is selectable and applies the extreme Code Compare profile", async ({ page }) => {
   await page.goto("/?debug=true");
   await page.waitForTimeout(900);
-  await page.getByRole("button", { name: "L5", exact: true }).click();
+  await page.getByRole("button", { name: "L10", exact: true }).click();
   await expect(page.getByText("Extreme", { exact: false }).first()).toBeVisible();
 
   const card = page.locator("article", { has: page.getByRole("heading", { name: "Code Compare" }) });
   await card.getByRole("button", { name: "Practice" }).click();
-  await expect(page.locator(".level-picker", { hasText: "L5 · Extreme" }).last()).toBeVisible();
+  await expect(page.locator(".level-picker", { hasText: "L10 · Extreme" }).last()).toBeVisible();
   await page.getByRole("button", { name: "Start practice" }).click();
 
   await expect(page.locator(".reference-code strong")).toHaveText(/^\d{14}$/);

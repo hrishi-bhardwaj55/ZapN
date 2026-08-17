@@ -17,12 +17,12 @@ export interface DigitLevelSettings {
 
 export function digitLevelSettings(level: GameLevel): DigitLevelSettings {
   return {
-    initialSpan: levelValue(level, [4, 5, 6, 7, 8]),
-    minimumSpan: levelValue(level, [4, 4, 5, 6, 7]),
-    maximumSpan: levelValue(level, [6, 7, 8, 9, 10]),
-    interDigitDelayMs: levelValue(level, [900, 780, 650, 520, 400]),
-    recallWindowMs: levelValue(level, [14000, 12000, 10000, 8000, 6500]),
-    trials: levelValue(level, [3, 6, 6, 9, 9]),
+    initialSpan: levelValue(level, [4, 5, 6, 6, 6, 6, 7, 7, 7, 8]),
+    minimumSpan: levelValue(level, [4, 4, 5, 5, 5, 5, 5, 6, 6, 7]),
+    maximumSpan: levelValue(level, [6, 7, 8, 8, 8, 9, 9, 9, 9, 10]),
+    interDigitDelayMs: levelValue(level, [900, 780, 650, 625, 600, 580, 560, 540, 520, 400]),
+    recallWindowMs: levelValue(level, [14000, 12000, 10000, 9600, 9200, 8800, 8500, 8200, 8000, 6500]),
+    trials: levelValue(level, [3, 6, 6, 6, 6, 9, 9, 9, 9, 9]),
   };
 }
 
