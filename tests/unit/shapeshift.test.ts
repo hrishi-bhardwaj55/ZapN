@@ -45,11 +45,11 @@ describe("Shapeshift engine", () => {
     expect(metrics.simonInterferenceMs).toBe(200);
   });
 
-  it("makes level 5 longer, faster, and more interference-heavy than level 1", () => {
+  it("makes level 10 longer, faster, and more interference-heavy than level 1", () => {
     const foundationProfile = shapeLevelProfile(1);
-    const extremeProfile = shapeLevelProfile(5);
+    const extremeProfile = shapeLevelProfile(10);
     const foundation = generateShapeTrials("level-shapes", foundationProfile.trials, 1);
-    const extreme = generateShapeTrials("level-shapes", extremeProfile.trials, 5);
+    const extreme = generateShapeTrials("level-shapes", extremeProfile.trials, 10);
     const interferenceRate = (trials: ReturnType<typeof generateShapeTrials>) =>
       trials.filter((trial) => !trial.congruent).length / trials.length;
 

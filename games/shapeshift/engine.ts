@@ -40,6 +40,11 @@ export function shapeLevelProfile(level: GameLevel): ShapeLevelProfile {
     { trials: 8, responseWindowMs: 2200, preparationRangeMs: [900, 1400], incongruentRatio: 0.25 },
     { trials: 10, responseWindowMs: 1800, preparationRangeMs: [700, 1100], incongruentRatio: 0.4 },
     { trials: 12, responseWindowMs: 1400, preparationRangeMs: [550, 1000], incongruentRatio: 0.5 },
+    { trials: 13, responseWindowMs: 1325, preparationRangeMs: [510, 925], incongruentRatio: 0.52 },
+    { trials: 14, responseWindowMs: 1250, preparationRangeMs: [470, 850], incongruentRatio: 0.55 },
+    { trials: 14, responseWindowMs: 1175, preparationRangeMs: [430, 800], incongruentRatio: 0.575 },
+    { trials: 15, responseWindowMs: 1100, preparationRangeMs: [400, 750], incongruentRatio: 0.6 },
+    { trials: 15, responseWindowMs: 1050, preparationRangeMs: [375, 725], incongruentRatio: 0.61 },
     { trials: 16, responseWindowMs: 1000, preparationRangeMs: [350, 700], incongruentRatio: 0.625 },
     { trials: 20, responseWindowMs: 700, preparationRangeMs: [180, 450], incongruentRatio: 0.75 },
   ] as const);

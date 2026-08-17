@@ -49,9 +49,9 @@ describe("Stock Master engine", () => {
     expect(gauges).toEqual(generateGauges("gauges", 6, true));
     expect(gauges.map((gauge) => gauge.id)).toEqual([0, 1, 2, 3, 4, 5]);
   });
-  it("makes level five denser, faster, narrower, and more overlapping than level one", () => {
+  it("makes level ten denser, faster, narrower, and more overlapping than level one", () => {
     const levelOne = stockLevelSettings(1);
-    const levelFive = stockLevelSettings(5);
+    const levelFive = stockLevelSettings(10);
     const easy = generateGauges("level-seed", levelOne.gaugeCount, levelOne);
     const hard = generateGauges("level-seed", levelFive.gaugeCount, levelFive);
     const arrivalSpread = (gauges: typeof easy) => {

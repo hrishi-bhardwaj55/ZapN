@@ -2,7 +2,7 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 
 type Condition = { shape: "circle" | "square"; position: "left" | "right"; incongruent: boolean };
 
-async function openShapeshift(page: Page, level: 1 | 5) {
+async function openShapeshift(page: Page, level: 1 | 10) {
   await page.goto("/?debug=true");
   await page.waitForTimeout(900);
   await page.getByRole("button", { name: `L${level}`, exact: true }).click();
@@ -72,7 +72,7 @@ async function correctButton(page: Page, condition: Condition) {
   });
 }
 
-test("Shapeshift L1/L5 profiles, controls, guards, pause, layout, and result metadata", async ({ page }) => {
+test("Shapeshift L1/L10 profiles, controls, guards, pause, layout, and result metadata", async ({ page }) => {
   test.setTimeout(120_000);
   const consoleErrors: string[] = [];
   page.on("console", (message) => {
@@ -144,12 +144,12 @@ test("Shapeshift L1/L5 profiles, controls, guards, pause, layout, and result met
   expect(verifiedDoubleSubmit).toBe(true);
 
   await page.getByRole("button", { name: "← Practice library" }).click();
-  await page.getByRole("button", { name: "L5", exact: true }).click();
+  await page.getByRole("button", { name: "L10", exact: true }).click();
   const card = page.locator("article", {
     has: page.getByRole("heading", { name: "Shapeshift" }),
   });
   await card.getByRole("button", { name: "Practice" }).click();
-  await expect(page.locator(".level-picker").last()).toContainText("L5 · Extreme");
+  await expect(page.locator(".level-picker").last()).toContainText("L10 · Extreme");
   const level5StartedAt = Date.now();
   await page.getByRole("button", { name: "Start practice" }).click();
   await expect(page.locator(".game-status-metrics")).toContainText("1 / 20");
@@ -193,6 +193,6 @@ test("Shapeshift L1/L5 profiles, controls, guards, pause, layout, and result met
   }
   await expect(page.getByText("ATTEMPT COMPLETE")).toBeVisible();
   expect(level5Conditions.filter((condition) => condition.incongruent)).toHaveLength(15);
-  await expect(page.getByText(/L5 Extreme · medium · seeded run/)).toBeVisible();
+  await expect(page.getByText(/L10 Extreme · medium · seeded run/)).toBeVisible();
   expect(consoleErrors).toEqual([]);
 });

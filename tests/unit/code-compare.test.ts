@@ -13,14 +13,14 @@ describe("Code Compare engine", () => {
   it("is deterministic", () => {
     expect(generateCodeTrials("same", 4, 6)).toEqual(generateCodeTrials("same", 4, 6));
   });
-  it("makes level 5 denser and faster than level 1", () => {
+  it("makes level 10 denser and faster than level 1", () => {
     const level1 = codeCompareLevelSettings(1);
-    const level5 = codeCompareLevelSettings(5);
-    expect(level5.codeLength).toBeGreaterThan(level1.codeLength);
-    expect(level5.choiceCount).toBeGreaterThan(level1.choiceCount);
-    expect(level5.responseWindowMs).toBeLessThan(level1.responseWindowMs);
-    expect(level5.mutationKinds.length).toBeGreaterThan(level1.mutationKinds.length);
-    const trials = generateCodeTrials("extreme", 20, level5.codeLength, level5.choiceCount, level5.mutationKinds);
+    const level10 = codeCompareLevelSettings(10);
+    expect(level10.codeLength).toBeGreaterThan(level1.codeLength);
+    expect(level10.choiceCount).toBeGreaterThan(level1.choiceCount);
+    expect(level10.responseWindowMs).toBeLessThan(level1.responseWindowMs);
+    expect(level10.mutationKinds.length).toBeGreaterThan(level1.mutationKinds.length);
+    const trials = generateCodeTrials("extreme", 20, level10.codeLength, level10.choiceCount, level10.mutationKinds);
     expect(trials.every(hasExactlyOneMatch)).toBe(true);
     expect(trials.every((trial) => trial.choices.length === 6)).toBe(true);
     expect(trials.some((trial) => trial.mutationKinds.some((kind) => kind !== "single"))).toBe(true);

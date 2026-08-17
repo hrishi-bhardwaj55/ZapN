@@ -25,7 +25,7 @@ async function assertNoHorizontalClipping(page: Page, controls: Locator[]) {
   }
 }
 
-test("Code Compare L1/L5 profiles, inputs, pause, and results", async ({ page }) => {
+test("Code Compare L1/L10 profiles, inputs, pause, and results", async ({ page }) => {
   const browserErrors: string[] = [];
   page.on("console", (message) => {
     if (message.type() === "error") browserErrors.push(`console: ${message.text()}`);
@@ -71,10 +71,10 @@ test("Code Compare L1/L5 profiles, inputs, pause, and results", async ({ page })
   await page.getByRole("button", { name: "← Exit attempt" }).click();
   await page.getByRole("button", { name: "← Back" }).click();
   await page.getByLabel("Timed where supported").uncheck();
-  await page.getByRole("button", { name: "L5", exact: true }).click();
+  await page.getByRole("button", { name: "L10", exact: true }).click();
   const secondCard = await codeCompareCard(page);
   await secondCard.getByRole("button", { name: "Practice" }).click();
-  await expect(page.locator(".level-picker")).toContainText("L5 · Extreme");
+  await expect(page.locator(".level-picker")).toContainText("L10 · Extreme");
   await expect(page.locator(".level-picker")).toContainText("Fourteen digits, six choices, and the shortest response window.");
   await page.getByRole("button", { name: "Start practice" }).click();
 
@@ -100,10 +100,10 @@ test("Code Compare L1/L5 profiles, inputs, pause, and results", async ({ page })
   }
 
   await expect(page.getByText("ATTEMPT COMPLETE")).toBeVisible();
-  await expect(page.locator(".result-hero")).toContainText("L5 Extreme");
+  await expect(page.locator(".result-hero")).toContainText("L10 Extreme");
   const savedResult = await page.evaluate(() => JSON.parse(localStorage.getItem("cortex-history-v1") ?? "[]")[0]);
-  expect(savedResult.level).toBe(5);
-  expect(savedResult.metrics).toMatchObject({ level: 5, codeLength: 14, choiceCount: 6, responseWindowMs: 900 });
+  expect(savedResult.level).toBe(10);
+  expect(savedResult.metrics).toMatchObject({ level: 10, codeLength: 14, choiceCount: 6, responseWindowMs: 900 });
   expect(savedResult.rounds.slice(0, 12).map((round: { response: string }) => round.response)).toEqual([
     "1", "2", "3", "4", "5", "6", "1", "2", "3", "4", "5", "6",
   ]);

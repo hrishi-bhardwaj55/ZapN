@@ -19,7 +19,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const protocol = requestHeaders.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
   const metadataBase = new URL(`${protocol}://${host}`);
   const title = "Cortex Practice Lab";
-  const description = "Nine deterministic cognitive practice games with five progressive levels and clear feedback on speed, accuracy, planning, memory, and risk.";
+  const description = "Nine deterministic cognitive practice games with ten progressive levels and clear feedback on speed, accuracy, planning, memory, and risk.";
   const socialImage = new URL("/og.png", metadataBase).toString();
   return {
     metadataBase,

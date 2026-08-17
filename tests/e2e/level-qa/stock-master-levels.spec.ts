@@ -11,7 +11,7 @@ function collectErrors(page: Page): BrowserErrors {
   return errors;
 }
 
-async function openStockMaster(page: Page, level: 1 | 5) {
+async function openStockMaster(page: Page, level: 1 | 10) {
   await page.goto("/?debug=true");
   await page.waitForTimeout(900);
   const levelButton = page.getByRole("button", { name: `L${level}`, exact: true });
@@ -56,7 +56,7 @@ async function expectNoHorizontalClipping(page: Page) {
   expect(geometry.clipped).toEqual([]);
 }
 
-test("Stock Master L5 increases divided-attention load while preserving stable controls and missed passes", async ({ page }) => {
+test("Stock Master L10 increases divided-attention load while preserving stable controls and missed passes", async ({ page }) => {
   const errors = collectErrors(page);
   await page.setViewportSize({ width: 1440, height: 900 });
 
@@ -69,7 +69,7 @@ test("Stock Master L5 increases divided-attention load while preserving stable c
   await expect(page.locator(".game-status-metrics")).toContainText("1 / 8");
 
   await page.getByRole("button", { name: "← Exit attempt" }).click();
-  const levelFiveDescription = await openStockMaster(page, 5);
+  const levelFiveDescription = await openStockMaster(page, 10);
   expect(levelFiveDescription).toContain("Nine gauges");
   expect(levelFiveDescription).toContain("narrow zones");
   expect(levelFiveDescription).toContain("reversals");
@@ -107,21 +107,21 @@ test("Stock Master L5 increases divided-attention load while preserving stable c
 
   for (let attempt = 0; attempt < 20; attempt += 1) await page.keyboard.press("1");
   await expect(page.getByText("ATTEMPT COMPLETE")).toBeVisible({ timeout: 5_000 });
-  await expect(page.locator(".result-hero")).toContainText("L5 Extreme");
+  await expect(page.locator(".result-hero")).toContainText("L10 Extreme");
   const storedResult = await page.evaluate(() => {
     const history = JSON.parse(localStorage.getItem("cortex-history-v1") ?? "[]");
     return history.find((entry: { gameId: string }) => entry.gameId === "stock-master");
   });
   expect(storedResult).toMatchObject({
     gameId: "stock-master",
-    level: 5,
+    level: 10,
     metrics: {
       gaugeCount: 9,
       targetZoneWidth: 24,
       initialMinVelocity: 55,
       initialMaxVelocity: 84,
       arrivalSpacingMs: 60,
-      level: 5,
+      level: 10,
     },
   });
   expect(storedResult.metrics.missedTargetPasses).toBeGreaterThan(0);
@@ -133,10 +133,10 @@ for (const viewport of [
   { width: 1440, height: 900 },
   { width: 1024, height: 768 },
 ]) {
-  test(`Stock Master L5 controls fit ${viewport.width}x${viewport.height} without clipping`, async ({ page }) => {
+  test(`Stock Master L10 controls fit ${viewport.width}x${viewport.height} without clipping`, async ({ page }) => {
     const errors = collectErrors(page);
     await page.setViewportSize(viewport);
-    await openStockMaster(page, 5);
+    await openStockMaster(page, 10);
     await expect(page.locator("canvas.gauge-canvas")).toBeVisible();
     await expect(page.locator(".gauge-keys button")).toHaveCount(9);
     await expect(page.getByRole("button", { name: "Gauge 1", exact: false })).toBeVisible();

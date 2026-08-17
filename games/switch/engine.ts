@@ -32,10 +32,10 @@ export function arrowsMatch(top: string[], bottom: string[]) {
 
 export function switchLevelSettings(level: GameLevel) {
   return {
-    total: levelValue(level, [10, 12, 14, 16, 18]),
-    sequenceLength: levelValue(level, [3, 4, 5, 6, 7]),
-    switchRate: levelValue(level, [0.25, 0.4, 0.5, 0.7, 0.85]),
-    responseWindowMs: levelValue(level, [3000, 2500, 2000, 1550, 1150]),
+    total: levelValue(level, [10, 12, 14, 14, 14, 15, 15, 16, 16, 18]),
+    sequenceLength: levelValue(level, [3, 4, 5, 5, 5, 5, 6, 6, 6, 7]),
+    switchRate: levelValue(level, [0.25, 0.4, 0.5, 0.53, 0.56, 0.59, 0.62, 0.66, 0.7, 0.85]),
+    responseWindowMs: levelValue(level, [3000, 2500, 2000, 1925, 1850, 1775, 1700, 1625, 1550, 1150]),
   };
 }
 

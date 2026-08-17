@@ -11,7 +11,7 @@ function collectErrors(page: Page): BrowserErrors {
   return errors;
 }
 
-async function openNumberBox(page: Page, level: 1 | 5) {
+async function openNumberBox(page: Page, level: 1 | 10) {
   await page.goto("/?debug=true");
   await page.waitForTimeout(900);
   const levelButton = page.getByRole("button", { name: `L${level}`, exact: true });
@@ -63,7 +63,7 @@ async function expectNoHorizontalClipping(page: Page) {
   expect(geometry.clipped).toEqual([]);
 }
 
-test("Number Box L5 visibly tightens the profile and preserves the full clickable workflow", async ({ page }) => {
+test("Number Box L10 visibly tightens the profile and preserves the full clickable workflow", async ({ page }) => {
   const errors = collectErrors(page);
   await page.setViewportSize({ width: 1440, height: 900 });
 
@@ -76,7 +76,7 @@ test("Number Box L5 visibly tightens the profile and preserves the full clickabl
   expect(levelOneOperands.every((value) => value >= 1 && value <= 6)).toBe(true);
 
   await page.getByRole("button", { name: "← Exit attempt" }).click();
-  const levelFiveDescription = await openNumberBox(page, 5);
+  const levelFiveDescription = await openNumberBox(page, 10);
   const levelFiveOperands = await visibleOperands(page);
   expect(levelFiveDescription).toContain("maximum pressure");
   await expect(page.locator(".game-status-metrics")).toContainText("1 / 6");
@@ -124,7 +124,7 @@ test("Number Box L5 visibly tightens the profile and preserves the full clickabl
     await skip.click();
   }
   await expect(page.getByText("ATTEMPT COMPLETE")).toBeVisible({ timeout: 5_000 });
-  await expect(page.locator(".result-hero")).toContainText("L5 Extreme");
+  await expect(page.locator(".result-hero")).toContainText("L10 Extreme");
   await expectNoHorizontalClipping(page);
   expect(errors).toEqual({ console: [], page: [] });
 });
@@ -133,10 +133,10 @@ for (const viewport of [
   { width: 1440, height: 900 },
   { width: 1024, height: 768 },
 ]) {
-  test(`Number Box L5 controls fit ${viewport.width}x${viewport.height} without clipping`, async ({ page }) => {
+  test(`Number Box L10 controls fit ${viewport.width}x${viewport.height} without clipping`, async ({ page }) => {
     const errors = collectErrors(page);
     await page.setViewportSize(viewport);
-    await openNumberBox(page, 5);
+    await openNumberBox(page, 10);
     await expect(page.getByRole("button", { name: /Use value/ }).first()).toBeVisible();
     await expect(page.getByRole("button", { name: "÷", exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "Undo", exact: true })).toBeVisible();

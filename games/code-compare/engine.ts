@@ -15,6 +15,7 @@ export interface CodeTrial {
 export type CodeMutationKind = "single" | "adjacent-swap" | "double";
 
 export interface CodeCompareLevelSettings {
+  trials: number;
   codeLength: number;
   choiceCount: number;
   responseWindowMs: number;
@@ -23,13 +24,19 @@ export interface CodeCompareLevelSettings {
 
 export function codeCompareLevelSettings(level: GameLevel): CodeCompareLevelSettings {
   return {
-    codeLength: levelValue(level, [6, 8, 10, 12, 14]),
-    choiceCount: levelValue(level, [3, 4, 5, 5, 6]),
-    responseWindowMs: levelValue(level, [3000, 2400, 1800, 1300, 900]),
+    trials: levelValue(level, [6, 8, 10, 10, 10, 11, 11, 12, 12, 14]),
+    codeLength: levelValue(level, [6, 8, 10, 10, 10, 11, 11, 12, 12, 14]),
+    choiceCount: levelValue(level, [3, 4, 5, 5, 5, 5, 5, 5, 5, 6]),
+    responseWindowMs: levelValue(level, [3000, 2400, 1800, 1725, 1650, 1575, 1500, 1400, 1300, 900]),
     mutationKinds: levelValue(level, [
       ["single"],
       ["single"],
       ["single"],
+      ["single"],
+      ["single"],
+      ["single"],
+      ["single", "adjacent-swap"],
+      ["single", "adjacent-swap"],
       ["single", "adjacent-swap"],
       ["single", "adjacent-swap", "double"],
     ] as const),

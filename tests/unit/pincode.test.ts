@@ -24,14 +24,14 @@ describe("Pincode engine", () => {
   it("reproduces digit sequences", () => {
     expect(generateDigits("digits", 2, 7)).toEqual(generateDigits("digits", 2, 7));
   });
-  it("makes level 5 memory load higher and timing tighter than level 1", () => {
+  it("makes level 10 memory load higher and timing tighter than level 1", () => {
     const level1 = digitLevelSettings(1);
-    const level5 = digitLevelSettings(5);
-    expect(level5.initialSpan).toBeGreaterThan(level1.initialSpan);
-    expect(level5.maximumSpan).toBeGreaterThan(level1.maximumSpan);
-    expect(level5.interDigitDelayMs).toBeLessThan(level1.interDigitDelayMs);
-    expect(level5.recallWindowMs).toBeLessThan(level1.recallWindowMs);
-    expect(nextAdaptiveSpan(level5.initialSpan, true, level5.minimumSpan, level5.maximumSpan)).toBe(9);
-    expect(nextAdaptiveSpan(level5.maximumSpan, true, level5.minimumSpan, level5.maximumSpan)).toBe(10);
+    const level10 = digitLevelSettings(10);
+    expect(level10.initialSpan).toBeGreaterThan(level1.initialSpan);
+    expect(level10.maximumSpan).toBeGreaterThan(level1.maximumSpan);
+    expect(level10.interDigitDelayMs).toBeLessThan(level1.interDigitDelayMs);
+    expect(level10.recallWindowMs).toBeLessThan(level1.recallWindowMs);
+    expect(nextAdaptiveSpan(level10.initialSpan, true, level10.minimumSpan, level10.maximumSpan)).toBe(9);
+    expect(nextAdaptiveSpan(level10.maximumSpan, true, level10.minimumSpan, level10.maximumSpan)).toBe(10);
   });
 });

@@ -36,9 +36,9 @@ describe("Skyscraper engine", () => {
     expect(bfsOptimalMoves(puzzle.initial, puzzle.target, puzzle.capacity)).toHaveLength(puzzle.optimalPath.length);
   });
 
-  it("makes level 5 a larger puzzle with a deeper optimal solution than level 1", () => {
+  it("makes level 10 a larger puzzle with a deeper optimal solution than level 1", () => {
     const foundationOptions = skyscraperOptionsForLevel(1);
-    const extremeOptions = skyscraperOptionsForLevel(5);
+    const extremeOptions = skyscraperOptionsForLevel(10);
     const foundation = generateSkyscraperPuzzle("level-depth", foundationOptions);
     const extreme = generateSkyscraperPuzzle("level-depth", extremeOptions);
 

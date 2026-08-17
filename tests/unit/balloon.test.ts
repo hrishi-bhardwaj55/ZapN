@@ -45,16 +45,16 @@ describe("Balloon engine", () => {
     ]);
   });
 
-  it("makes level 5 longer and gives its risk profiles substantially more overlap than level 1", () => {
+  it("makes level 10 longer and gives its risk profiles substantially more overlap than level 1", () => {
     const foundation = balloonRiskProfile(1, "medium");
-    const extreme = balloonRiskProfile(5, "medium");
+    const extreme = balloonRiskProfile(10, "medium");
     const overlap = (left: readonly [number, number], right: readonly [number, number]) =>
       Math.max(0, Math.min(left[1], right[1]) - Math.max(left[0], right[0]) + 1);
     const overlapScore = (profile: ReturnType<typeof balloonRiskProfile>) =>
       overlap(profile.blue, profile.yellow) + overlap(profile.yellow, profile.orange);
 
-    expect(balloonCountForLevel(5)).toBeGreaterThan(balloonCountForLevel(1));
+    expect(balloonCountForLevel(10)).toBeGreaterThan(balloonCountForLevel(1));
     expect(overlapScore(extreme)).toBeGreaterThan(overlapScore(foundation));
-    expect(generateBalloons("level-seed", "medium", balloonCountForLevel(5), 5)).toHaveLength(20);
+    expect(generateBalloons("level-seed", "medium", balloonCountForLevel(10), 10)).toHaveLength(20);
   });
 });

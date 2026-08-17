@@ -11,7 +11,7 @@ function collectErrors(page: Page): BrowserErrors {
   return errors;
 }
 
-async function openFigurePractice(page: Page, level: 1 | 5) {
+async function openFigurePractice(page: Page, level: 1 | 10) {
   await page.goto("/?debug=true");
   await page.waitForTimeout(900);
   await page.getByRole("button", { name: `L${level}`, exact: true }).click();
@@ -69,7 +69,7 @@ async function expectNoHorizontalClipping(page: Page) {
   expect(geometry.clipped).toEqual([]);
 }
 
-test("Figure It Out exposes materially harder L5 controls and records an L5 completion", async ({ page }) => {
+test("Figure It Out exposes materially harder L10 controls and records an L10 completion", async ({ page }) => {
   const errors = collectErrors(page);
   await page.setViewportSize({ width: 1440, height: 900 });
 
@@ -79,7 +79,7 @@ test("Figure It Out exposes materially harder L5 controls and records an L5 comp
   expect(levelOne).toEqual({ colors: 2, shapes: 3, patterns: 2, candidates: 12 });
 
   await page.getByRole("button", { name: "← Exit attempt" }).click();
-  await openFigurePractice(page, 5);
+  await openFigurePractice(page, 10);
   const levelFive = await visibleProfile(page);
   await expect(page.locator(".game-status-metrics")).toContainText("1 / 4");
   expect(levelFive).toEqual({ colors: 4, shapes: 4, patterns: 5, candidates: 80 });
@@ -110,7 +110,7 @@ test("Figure It Out exposes materially harder L5 controls and records an L5 comp
 
   for (let guess = 0; guess < 4; guess += 1) await submit.click();
   await expect(page.getByText("ATTEMPT COMPLETE")).toBeVisible({ timeout: 5_000 });
-  await expect(page.locator(".result-hero")).toContainText("L5 Extreme");
+  await expect(page.locator(".result-hero")).toContainText("L10 Extreme");
   await expectNoHorizontalClipping(page);
   expect(errors).toEqual({ console: [], page: [] });
 });
@@ -119,10 +119,10 @@ for (const viewport of [
   { width: 1440, height: 900 },
   { width: 1024, height: 768 },
 ]) {
-  test(`Figure It Out L5 controls fit ${viewport.width}x${viewport.height} without horizontal clipping`, async ({ page }) => {
+  test(`Figure It Out L10 controls fit ${viewport.width}x${viewport.height} without horizontal clipping`, async ({ page }) => {
     const errors = collectErrors(page);
     await page.setViewportSize(viewport);
-    await openFigurePractice(page, 5);
+    await openFigurePractice(page, 10);
     await expect(page.getByRole("button", { name: "Pause" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Submit guess" })).toBeVisible();
     await expect(page.getByRole("combobox", { name: "Color", exact: true })).toBeVisible();

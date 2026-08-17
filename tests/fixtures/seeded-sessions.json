@@ -1,5 +1,5 @@
 {
-  "configVersion": "zapn-public-guide-v3.0",
+  "configVersion": "zapn-public-guide-v4.0",
   "fixtures": [
     {
       "seed": "2026-08-16-qa-a",
@@ -10,7 +10,7 @@
     {
       "seed": "2026-08-16-qa-b",
       "difficulty": "hard",
-      "level": 5,
+      "level": 10,
       "games": ["stock-master", "switch", "figure-it-out", "number-box", "pincode", "code-compare", "shapeshift", "skyscraper", "balloon"]
     }
   ]

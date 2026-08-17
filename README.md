@@ -1,16 +1,16 @@
 <div align="center">
-  <img src="docs/assets/cortex-readme-hero.svg" alt="Cortex Practice Lab — nine cognitive games with five progressive levels" width="100%" />
+  <img src="docs/assets/cortex-readme-hero.svg" alt="Cortex Practice Lab — nine cognitive games with ten progressive levels" width="100%" />
 
   <br />
 
   [![React 19](https://img.shields.io/badge/React-19-149ECA?style=flat-square&logo=react&logoColor=white)](https://react.dev/)
   [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
   [![Node.js 22+](https://img.shields.io/badge/Node.js-22.13%2B-339933?style=flat-square&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
-  [![Tests](https://img.shields.io/badge/tests-45_unit_%2B_28_browser-17A99A?style=flat-square)](#quality)
+  [![Tests](https://img.shields.io/badge/tests-48_unit_%2B_29_browser-17A99A?style=flat-square)](#quality)
 
   **A desktop-first cognitive training lab built from public task descriptions.**
 
-  [Get started](#run-locally) · [Explore the games](#nine-games-five-levels) · [Architecture](docs/architecture.md) · [Scoring](docs/scoring.md)
+  [Get started](#run-locally) · [Explore the games](#nine-games-ten-levels) · [Architecture](docs/architecture.md) · [Scoring](docs/scoring.md)
 </div>
 
 ---
@@ -21,16 +21,16 @@ Cortex turns nine publicly described cognitive tasks from the [Quant Career Hub 
 
 | Reproducible | Progressive | Measurable | Local-first |
 |---|---|---|---|
-| Seeded sessions replay the same challenge | Five levels increase the actual cognitive load | Per-round feedback and game-specific analytics | No account required; history stays in your browser |
+| Seeded sessions replay the same challenge | Ten levels increase the actual cognitive load | Per-round feedback and game-specific analytics | No account required; history stays in your browser |
 
 > [!IMPORTANT]
 > Cortex is independent practice software, not proprietary assessment software. `Practice Score` is a training heuristic—not an Optiver score, percentile, pass mark, or hiring prediction.
 
-## Nine games, five levels
+## Nine games, ten levels
 
-Every game progresses from **L1 Foundation** to **L5 Extreme**. Higher levels change the core task rather than merely repeating more rounds.
+Every game progresses from **L1 Foundation** to **L10 Extreme**. Five closely calibrated L4–L8 steps bridge Advanced and Expert; higher levels change the core task rather than merely repeating more rounds.
 
-| Game | Primary skill | Level 5 challenge |
+| Game | Primary skill | Level 10 challenge |
 |---|---|---|
 | **Balloon** | Risk calibration | 20 balloons with overlapping hidden risk profiles |
 | **Skyscraper** | Planning | 7 blocks, 4 stacks, and deeper optimal paths |
@@ -113,14 +113,14 @@ Copy `.env.example` to `.env` when using the API or Docker services that require
 ## Quality
 
 ```bash
-npm run test:unit   # 45 deterministic engine tests
-npm run test:e2e    # 28 full browser tests
+npm run test:unit   # 48 deterministic engine tests
+npm run test:e2e    # 29 full browser tests
 npm run lint
 npx tsc --noEmit
 npm test            # production build + rendered-page checks
 ```
 
-The browser suite covers tutorials, L1/L5 progression, mouse and keyboard input, pause guards, timeouts, result persistence, console errors, and desktop layout. Timing-sensitive games run serially so browser scheduling cannot mask game behavior.
+The browser suite covers tutorials, L1/L10 progression, all ten level selectors, mouse and keyboard input, pause guards, timeouts, result persistence, console errors, and desktop layout at 1440×900 and 1024×768. Timing-sensitive games run serially so browser scheduling cannot mask game behavior.
 
 ## Project map
 

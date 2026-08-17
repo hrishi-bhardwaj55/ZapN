@@ -21,14 +21,14 @@ export interface GaugeGenerationProfile {
 
 export function stockLevelSettings(level: GameLevel) {
   return {
-    gaugeCount: levelValue(level, [2, 4, 4, 6, 9]),
-    total: levelValue(level, [8, 9, 11, 13, 15]),
-    targetWidth: levelValue(level, [58, 50, 42, 32, 24]),
-    minVelocity: levelValue(level, [24, 30, 35, 45, 55]),
-    maxVelocity: levelValue(level, [36, 46, 52, 68, 84]),
-    reverseChance: levelValue(level, [0, 0.06, 0.12, 0.28, 0.48]),
-    arrivalSpacingSeconds: levelValue(level, [1.6, 0.85, 0.48, 0.2, 0.06]),
-    arrivalJitterSeconds: levelValue(level, [0.12, 0.14, 0.16, 0.12, 0.06]),
+    gaugeCount: levelValue(level, [2, 4, 4, 4, 5, 5, 5, 6, 6, 9]),
+    total: levelValue(level, [8, 9, 11, 11, 11, 12, 12, 12, 13, 15]),
+    targetWidth: levelValue(level, [58, 50, 42, 40, 39, 37, 35, 34, 32, 24]),
+    minVelocity: levelValue(level, [24, 30, 35, 37, 38, 40, 42, 44, 45, 55]),
+    maxVelocity: levelValue(level, [36, 46, 52, 55, 57, 60, 63, 65, 68, 84]),
+    reverseChance: levelValue(level, [0, 0.06, 0.12, 0.14, 0.16, 0.19, 0.22, 0.25, 0.28, 0.48]),
+    arrivalSpacingSeconds: levelValue(level, [1.6, 0.85, 0.48, 0.43, 0.39, 0.34, 0.29, 0.24, 0.2, 0.06]),
+    arrivalJitterSeconds: levelValue(level, [0.12, 0.14, 0.16, 0.16, 0.15, 0.15, 0.14, 0.13, 0.12, 0.06]),
   };
 }
 
